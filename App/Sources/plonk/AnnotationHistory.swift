@@ -18,8 +18,10 @@ struct AnnotationHistory {
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
 
-    mutating func begin(_ kind: Annotation.Kind, at point: CGPoint, color: Int, width: Double) {
-        live = Annotation(kind: kind, points: [point], colorIndex: color, width: width)
+    mutating func begin(_ kind: Annotation.Kind, at point: CGPoint, color: Int, width: Double,
+                        mosaicBlockSize: Double? = nil) {
+        live = Annotation(kind: kind, points: [point], colorIndex: color, width: width,
+                          mosaicBlockSize: mosaicBlockSize)
     }
 
     mutating func drag(to point: CGPoint) {
@@ -32,9 +34,10 @@ struct AnnotationHistory {
         live = annotation
     }
 
-    mutating func end() {
+    mutating func end(rendered: Annotation? = nil) {
         defer { live = nil }
-        guard let live, live.points.count > 1 else { return }
+        guard let live = rendered ?? live, live.points.count > 1,
+              !live.kind.usesSourcePixels || rendered != nil else { return }
         if live.kind == .spotlight, live.boundingRect(in: CGSize(width: 1, height: 1)).isEmpty { return }
         append(live)
     }

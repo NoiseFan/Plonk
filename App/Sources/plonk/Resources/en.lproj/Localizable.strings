@@ -625,6 +625,8 @@
 "tool.ellipse" = "Ellipse";
 "tool.spotlight" = "Spotlight";
 "tool.highlight" = "Highlight";
+"tool.mosaic" = "Mosaic";
+"tool.redact" = "Opaque Redaction";
 "tool.step" = "Step Number";
 "tool.text" = "Text";
 "shotEditor.color %lld" = "Color %lld";

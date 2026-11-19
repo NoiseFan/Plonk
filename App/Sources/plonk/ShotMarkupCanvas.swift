@@ -35,6 +35,9 @@ class ShotMarkupCanvas: NSView {
     override var acceptsFirstResponder: Bool { true }
     var imageRect: CGRect { bounds }
     var markupClip: CGRect { imageRect }
+    var sourceBitmap: ShotBitmap? { nil }
+
+    private var renderedMosaic: Annotation?
 
     override func layout() {
         super.layout()
@@ -47,7 +50,8 @@ class ShotMarkupCanvas: NSView {
     func updateMarkup() {
         preview.frame = bounds
         preview.rootView = ShotMarkupLayer(history: history, imageRect: imageRect, clip: markupClip,
-                                          selectedStep: selectedStep, movedStep: stepDrag?.preview)
+                                          selectedStep: selectedStep, movedStep: stepDrag?.preview,
+                                          renderedMosaic: renderedMosaic)
     }
 
     @discardableResult
@@ -59,7 +63,9 @@ class ShotMarkupCanvas: NSView {
         } else if tool == .step {
             beginStep(at: unit, location: CGPoint(x: point.x - imageRect.minX, y: point.y - imageRect.minY))
         } else {
-            history.begin(tool, at: unit, color: colorIndex, width: strokePoints / imageRect.width)
+            history.begin(tool, at: unit, color: colorIndex, width: strokePoints / imageRect.width,
+                          mosaicBlockSize: tool == .mosaic ? max(4, (strokePoints * 4).rounded()) : nil)
+            renderedMosaic = nil
             updateMarkup()
         }
         return true
@@ -79,6 +85,9 @@ class ShotMarkupCanvas: NSView {
         }
         guard history.live != nil else { return false }
         history.drag(to: ImageFit.unitPoint(point, in: imageRect))
+        if let mark = history.live, mark.kind.usesSourcePixels, let sourceBitmap {
+            renderedMosaic = ShotMosaic.render(mark, from: sourceBitmap)
+        }
         updateMarkup()
         return true
     }
@@ -94,7 +103,8 @@ class ShotMarkupCanvas: NSView {
         }
         guard let last = history.live?.points.last else { return false }
         if last != ImageFit.unitPoint(point, in: imageRect) { dragMark(to: point) }
-        history.end()
+        history.end(rendered: renderedMosaic)
+        renderedMosaic = nil
         changedHistory()
         return true
     }

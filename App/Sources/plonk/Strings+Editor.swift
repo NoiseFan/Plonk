@@ -22,6 +22,8 @@ extension LocalizedStringResource {
     static let toolEllipse = Self.key("tool.ellipse")
     static let toolSpotlight = Self.key("tool.spotlight")
     static let toolHighlight = Self.key("tool.highlight")
+    static let toolMosaic = Self.key("tool.mosaic")
+    static let toolRedact = Self.key("tool.redact")
     static let toolStep = Self.key("tool.step")
     static let toolText = Self.key("tool.text")
 

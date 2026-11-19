@@ -131,7 +131,7 @@ final class ShotRoutes {
         }
         let marks = raw.compactMap { Annotation(dict: $0) }
         guard marks.count == raw.count else {
-            let kinds = Annotation.Kind.allCases.map(\.rawValue).joined(separator: ", ")
+            let kinds = Annotation.Kind.allCases.filter(\.acceptsAPIPoints).map(\.rawValue).joined(separator: ", ")
             return .badRequest("every mark needs a kind (\(kinds)) and at least two points in 0..1")
         }
         let expanded = (path as NSString).expandingTildeInPath
