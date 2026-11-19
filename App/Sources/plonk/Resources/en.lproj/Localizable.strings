@@ -84,6 +84,14 @@
 "shot.afterCapture" = "After Capture";
 "shot.afterQuickActions" = "Quick Actions";
 "shot.afterEditor" = "Open Editor";
+"shot.scroll" = "Scrolling Capture (S)";
+"shot.scrollStarting" = "Preparing scrolling capture…";
+"shot.scrollReady" = "Scroll down in the selection. Enter to finish.";
+"shot.scrollPaused" = "Stitching paused. Scroll back or press Enter.";
+"shot.scrollFull" = "Length limit reached. Press Enter to finish.";
+"shot.scrollFinishing" = "Preparing the long screenshot…";
+"shot.scrollFailed" = "Capture stopped. Press Enter to use any captured content or Esc to return.";
+"shot.scrollUnavailable" = "Scrolling capture needs Accessibility access and a selection of at least 32 × 32 pixels.";
 "shot.selectionWidth" = "Selection Width";
 "shot.selectionHeight" = "Selection Height";
 "shot.selectionPixels" = "px";

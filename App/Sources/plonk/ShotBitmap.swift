@@ -4,6 +4,8 @@ struct ShotBitmap {
     let image: CGImage
     var size: CGSize { CGSize(width: image.width, height: image.height) }
 
+    init(image: CGImage) { self.image = image }
+
     init?(_ source: NSImage) {
         guard let image = source.representations.compactMap({ $0 as? NSBitmapImageRep })
             .max(by: { $0.pixelsWide < $1.pixelsWide })?.cgImage else { return nil }

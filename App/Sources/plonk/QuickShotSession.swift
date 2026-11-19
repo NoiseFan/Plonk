@@ -6,6 +6,7 @@ final class QuickShotSession: NSObject {
     private let onEditor: (NSImage, AnnotationHistory) -> Void
     private let onPresented: () -> Void
     private var onClose: (() -> Void)?
+    private var scrolling: ScrollShotCapture?
     private var windows: [QuickShotWindow] = []
 
     init(config: @escaping () -> Config, onFinish: @escaping (Bool, String?) -> Void,
@@ -37,18 +38,85 @@ final class QuickShotSession: NSObject {
                 guard let image, let bitmap = ShotBitmap(image) else { return failCapture() }
                 let window = QuickShotWindow(screen: screen, bitmap: bitmap, accent: config().appearance.accent)
                 window.onCancel = { [weak self] in self?.close() }
-                window.canvas.onSelect = { [weak self, weak window] in
-                    self?.windows.filter { $0 !== window }.forEach { $0.canvas.clearSelection() }
-                }
-                window.canvas.onAction = { [weak self, weak window] image, history, action in
-                    guard let window else { return }
-                    self?.perform(action, image: image, history: history, window: window)
-                }
+                configure(window)
                 windows.append(window)
                 pending -= 1
                 if pending == 0 { present() }
             }
         }
+    }
+
+    private func configure(_ window: QuickShotWindow) {
+        window.canvas.onSelect = { [weak self, weak window] in
+            self?.windows.filter { $0 !== window }.forEach { $0.canvas.clearSelection() }
+        }
+        window.canvas.onAction = { [weak self, weak window] image, history, action in
+            guard let window else { return }
+            self?.perform(action, image: image, history: history, window: window)
+        }
+        window.canvas.onStartScroll = { [weak self, weak window] in
+            if let window { self?.startScroll(in: window) }
+        }
+        window.canvas.onCancel = { [weak self] in self?.close() }
+    }
+
+    private func startScroll(in window: QuickShotWindow) {
+        guard scrolling == nil, let screen = window.screen, let region = window.canvas.scrollRegion,
+              let pixels = window.canvas.scrollPixels,
+              let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return }
+        guard pixels.width >= 32, pixels.height >= 32, CGPreflightPostEventAccess() else {
+            HUD.shared.show(.shotScrollUnavailable)
+            return
+        }
+        windows.filter { $0 !== window }.forEach { $0.orderOut(nil) }
+        let bounds = CGRect(origin: .zero, size: window.frame.size)
+        let visible = screen.visibleFrame
+        let safe = CGRect(x: visible.minX - window.frame.minX, y: window.frame.maxY - visible.maxY,
+                          width: visible.width, height: visible.height)
+        let view = ScrollShotView(frame: bounds, selection: region, safeArea: safe, accent: config().appearance.accent)
+        let capture = ScrollShotCapture { [weak window, weak view] image, status in
+            guard window?.contentView === view else { return }
+            view?.update(image, status: status)
+        }
+        scrolling = capture
+        window.showScroll(view)
+        var finishing = false
+        window.onScrollKey = { [weak self, weak window, weak view, weak capture] finish in
+            guard let self, let window, let capture, scrolling === capture else { return }
+            if !finish {
+                capture.stop()
+                restoreSelection(in: window)
+            } else if !finishing {
+                finishing = true
+                view?.finishing()
+                capture.stop { [weak self, weak window, weak capture] image in
+                    guard let self, let window, let capture, scrolling === capture else { return }
+                    if let image {
+                        let canvas = QuickShotCanvas(bitmap: ShotBitmap(image: image), frame: bounds,
+                                                     safeArea: safe, accent: config().appearance.accent, fixed: true)
+                        scrolling = nil
+                        window.onScrollKey = nil
+                        window.showCanvas(canvas)
+                        configure(window)
+                    } else {
+                        restoreSelection(in: window)
+                        HUD.shared.show(.shotScrollFailed)
+                    }
+                }
+            }
+        }
+        let source = CGRect(x: window.frame.minX - screen.frame.minX + region.minX,
+                            y: screen.frame.maxY - window.frame.maxY + region.minY,
+                            width: region.width, height: region.height)
+        MainActor.assumeIsolated { capture.start(displayID: number.uint32Value, region: source, pixels: pixels) }
+    }
+
+    private func restoreSelection(in window: QuickShotWindow) {
+        scrolling = nil
+        window.onScrollKey = nil
+        windows.forEach { $0.orderFrontRegardless() }
+        window.makeKey()
+        window.showCanvas()
     }
 
     private func present() {
@@ -71,6 +139,7 @@ final class QuickShotSession: NSObject {
     private func perform(_ action: QuickShotAction, image: NSImage, history: AnnotationHistory,
                          window: QuickShotWindow) {
         switch action {
+        case .scroll: break
         case .editor:
             close()
             onEditor(image, history)
@@ -133,6 +202,8 @@ final class QuickShotSession: NSObject {
     @objc func close() {
         guard let onClose else { return }
         self.onClose = nil
+        scrolling?.stop()
+        scrolling = nil
         NotificationCenter.default.removeObserver(self)
         for window in windows {
             if let sheet = window.attachedSheet { window.endSheet(sheet, returnCode: .cancel) }

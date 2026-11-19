@@ -3,6 +3,7 @@ enum QuickShotAction {
     case saveAs
     case copy
     case editor
+    case scroll
     case preview
     case recognizeText
 }
