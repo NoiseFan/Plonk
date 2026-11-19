@@ -19,6 +19,10 @@ What changed in each release, from a user's side. The commit log has the rest.
 - Screenshot shortcuts follow focus between the canvas, text fields, and save dialogs. Plonk's global shortcuts pause while screenshot editing owns the keyboard.
 - Blue (`#0077F6`) is available as the first accent colour in Appearance.
 
+### Fixed
+
+- Scrolling capture explains whether the selection is too small or Accessibility access is required.
+
 ### Changed
 
 - The Simplified Chinese translation now calls window zones “分屏” and the pointer “鼠标”.
