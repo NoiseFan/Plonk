@@ -14,7 +14,7 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>lld</string>
 			<key>other</key>
-			<string>%lld 个分区</string>
+			<string>%lld 个分屏</string>
 		</dict>
 	</dict>
 	<key>workspaces.appCount %lld</key>

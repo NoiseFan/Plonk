@@ -22,7 +22,7 @@ struct LocalizationTests {
     }
 
     @Test func valuesAreFilledIn() {
-        #expect(String(localized: .shortcutZone(3)) == (usesSimplifiedChinese ? "分区 3" : "Zone 3"))
+        #expect(String(localized: .shortcutZone(3)) == (usesSimplifiedChinese ? "分屏 3" : "Zone 3"))
         #expect(String(localized: .aiAgentOffline("codex")) == (usesSimplifiedChinese ? "codex（离线）" : "codex (offline)"))
     }
 
