@@ -3,7 +3,14 @@ import AppKit
 class ShotMarkupCanvas: NSView {
     private(set) var history: AnnotationHistory
     var onHistoryChanged: ((AnnotationHistory) -> Void)?
-    var tool: Annotation.Kind?
+    var tool: Annotation.Kind? {
+        didSet {
+            if tool != oldValue {
+                selectedStep = nil
+                updateMarkup()
+            }
+        }
+    }
     var colorIndex = 0
     var strokePoints: Double = 4
 
@@ -12,6 +19,9 @@ class ShotMarkupCanvas: NSView {
 
     private var textEntry: ShotTextEntry?
     private var textMark: Annotation?
+    private var selectedStep: UUID?
+    private var stepDrag: (original: Annotation, anchor: CGPoint, preview: Annotation)?
+    var canDeleteStep: Bool { history.annotations.contains { $0.id == selectedStep } }
 
     init(frame: CGRect, history: AnnotationHistory = AnnotationHistory()) {
         self.history = history
@@ -25,6 +35,9 @@ class ShotMarkupCanvas: NSView {
     override var acceptsFirstResponder: Bool { true }
     var imageRect: CGRect { bounds }
     var markupClip: CGRect { imageRect }
+    var sourceBitmap: ShotBitmap? { nil }
+
+    private var renderedMosaic: Annotation?
 
     override func layout() {
         super.layout()
@@ -36,7 +49,9 @@ class ShotMarkupCanvas: NSView {
 
     func updateMarkup() {
         preview.frame = bounds
-        preview.rootView = ShotMarkupLayer(history: history, imageRect: imageRect, clip: markupClip)
+        preview.rootView = ShotMarkupLayer(history: history, imageRect: imageRect, clip: markupClip,
+                                          selectedStep: selectedStep, movedStep: stepDrag?.preview,
+                                          renderedMosaic: renderedMosaic)
     }
 
     @discardableResult
@@ -45,8 +60,12 @@ class ShotMarkupCanvas: NSView {
         let unit = ImageFit.unitPoint(point, in: imageRect)
         if tool == .text {
             beginText(at: unit)
+        } else if tool == .step {
+            beginStep(at: unit, location: CGPoint(x: point.x - imageRect.minX, y: point.y - imageRect.minY))
         } else {
-            history.begin(tool, at: unit, color: colorIndex, width: strokePoints / imageRect.width)
+            history.begin(tool, at: unit, color: colorIndex, width: strokePoints / imageRect.width,
+                          mosaicBlockSize: tool == .mosaic ? max(4, (strokePoints * 4).rounded()) : nil)
+            renderedMosaic = nil
             updateMarkup()
         }
         return true
@@ -54,19 +73,62 @@ class ShotMarkupCanvas: NSView {
 
     @discardableResult
     func dragMark(to point: CGPoint) -> Bool {
+        if var drag = stepDrag, let center = drag.original.points.first {
+            let location = CGPoint(x: point.x.clamped(to: markupClip.minX...markupClip.maxX),
+                                   y: point.y.clamped(to: markupClip.minY...markupClip.maxY))
+            let unit = ImageFit.unitPoint(location, in: imageRect)
+            drag.preview.points = [CGPoint(x: center.x + (unit.x - drag.anchor.x),
+                                           y: center.y + (unit.y - drag.anchor.y))]
+            stepDrag = drag
+            updateMarkup()
+            return true
+        }
         guard history.live != nil else { return false }
         history.drag(to: ImageFit.unitPoint(point, in: imageRect))
+        if let mark = history.live, mark.kind.usesSourcePixels, let sourceBitmap {
+            renderedMosaic = ShotMosaic.render(mark, from: sourceBitmap)
+        }
         updateMarkup()
         return true
     }
 
     @discardableResult
     func endMark(at point: CGPoint) -> Bool {
+        if stepDrag != nil {
+            dragMark(to: point)
+            if let drag = stepDrag { history.editStep(drag.original, replacement: drag.preview) }
+            stepDrag = nil
+            changedHistory()
+            return true
+        }
         guard let last = history.live?.points.last else { return false }
         if last != ImageFit.unitPoint(point, in: imageRect) { dragMark(to: point) }
-        history.end()
+        history.end(rendered: renderedMosaic)
+        renderedMosaic = nil
         changedHistory()
         return true
+    }
+
+    private func beginStep(at unit: CGPoint, location: CGPoint) {
+        if let mark = history.annotations.last(where: {
+            $0.kind == .step && NSBezierPath(ovalIn: $0.stepRect(in: imageRect.size)).contains(location)
+        }) {
+            selectedStep = mark.id
+            stepDrag = (mark, unit, mark)
+            updateMarkup()
+        } else {
+            let mark = history.addStep(at: unit, color: colorIndex,
+                                       diameter: max(24, strokePoints * 6) / imageRect.width)
+            selectedStep = mark.id
+            changedHistory()
+        }
+    }
+
+    func deleteStep() {
+        guard let mark = history.annotations.first(where: { $0.id == selectedStep }) else { return }
+        selectedStep = nil
+        history.editStep(mark, replacement: nil)
+        changedHistory()
     }
 
     func undoMark() {

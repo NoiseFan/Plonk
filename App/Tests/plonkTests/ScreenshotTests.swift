@@ -76,6 +76,29 @@ struct AnnotationTests {
         #expect(bounds.maxX <= 100.001)
         #expect(bounds.minX >= -0.001)
     }
+
+    @Test @MainActor func spotlightExportKeepsOverlappingRegionsBright() throws {
+        let size = CGSize(width: 100, height: 100)
+        let image = NSImage(size: size, flipped: true) { rect in
+            NSColor.white.setFill()
+            rect.fill()
+            return true
+        }
+        var history = AnnotationHistory()
+        for (start, end) in [(0.2, 0.6), (0.4, 0.8)] {
+            history.begin(.spotlight, at: CGPoint(x: start, y: 0.2), color: 0, width: 0.01)
+            history.drag(to: CGPoint(x: end, y: 0.8))
+            history.end()
+        }
+        let exported = try #require(image.annotated(with: history.annotations))
+        let imageData = try #require(exported.tiffRepresentation)
+        let bitmap = try #require(NSBitmapImageRep(data: imageData))
+        let y = bitmap.pixelsHigh / 2
+        let overlap = try #require(bitmap.colorAt(x: bitmap.pixelsWide / 2, y: y)?.usingColorSpace(.deviceRGB))
+        let outside = try #require(bitmap.colorAt(x: 0, y: y)?.usingColorSpace(.deviceRGB))
+        #expect(overlap.redComponent > 0.95)
+        #expect(outside.redComponent < 0.8)
+    }
 }
 
 struct ScreenshotManagerTests {

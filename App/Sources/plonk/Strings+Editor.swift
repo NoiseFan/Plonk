@@ -16,10 +16,15 @@ extension LocalizedStringResource {
     static let shotEditorWriteFailed = Self.key("shotEditor.writeFailed")
 
     static let toolPen = Self.key("tool.pen")
+    static let toolLine = Self.key("tool.line")
     static let toolArrow = Self.key("tool.arrow")
     static let toolRectangle = Self.key("tool.rectangle")
     static let toolEllipse = Self.key("tool.ellipse")
+    static let toolSpotlight = Self.key("tool.spotlight")
     static let toolHighlight = Self.key("tool.highlight")
+    static let toolMosaic = Self.key("tool.mosaic")
+    static let toolRedact = Self.key("tool.redact")
+    static let toolStep = Self.key("tool.step")
     static let toolText = Self.key("tool.text")
 
     static let guideFilter = Self.key("guide.filter")

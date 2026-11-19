@@ -2,6 +2,8 @@ import AppKit
 
 final class ShotEditorCanvas: ShotMarkupCanvas {
     let image: NSImage
+    private lazy var bitmap = ShotBitmap(image)
+    override var sourceBitmap: ShotBitmap? { bitmap }
 
     init(image: NSImage, history: AnnotationHistory) {
         self.image = image

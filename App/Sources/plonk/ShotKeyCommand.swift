@@ -4,6 +4,7 @@ import Carbon.HIToolbox
 enum ShotKeyCommand {
     case action(QuickShotAction)
     case select(Annotation.Kind)
+    case deleteStep
     case undo
     case redo
     case cancel
@@ -33,13 +34,21 @@ enum ShotKeyCommand {
         switch Int(event.keyCode) {
         case kVK_Return, kVK_ANSI_KeypadEnter, kVK_Space:
             self = .action(.copy)
+        case kVK_Delete, kVK_ForwardDelete:
+            guard canvas.canDeleteStep else { return nil }
+            self = .deleteStep
         default:
             switch key {
             case "1": self = .select(.rectangle)
             case "2": self = .select(.ellipse)
+            case "3": self = .select(.line)
             case "4": self = .select(.arrow)
             case "5": self = .select(.pen)
+            case "6": self = .select(.spotlight)
             case "7": self = .select(.text)
+            case "8": self = .select(.step)
+            case "9": self = .select(.mosaic)
+            case "0": self = .select(.redact)
             case "s": self = .action(.scroll)
             case "p": self = .action(.preview)
             case "o": self = .action(.recognizeText)

@@ -64,8 +64,8 @@ final class ShotMarkupTools: NSObject {
     }
 
     private func refreshHistory(_ history: AnnotationHistory) {
-        undoButton.isEnabled = !history.annotations.isEmpty
-        redoButton.isEnabled = !history.redoStack.isEmpty
+        undoButton.isEnabled = history.canUndo
+        redoButton.isEnabled = history.canRedo
     }
 
     @objc private func choose(_ button: NSButton) {

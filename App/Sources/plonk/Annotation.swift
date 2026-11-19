@@ -9,9 +9,14 @@ struct Annotation: Identifiable, Equatable {
     enum Kind: String, CaseIterable, Identifiable {
         case pen
         case arrow
+        case line
         case rectangle
         case ellipse
         case highlight
+        case spotlight
+        case step
+        case mosaic
+        case redact
         case text
 
         var id: String { rawValue }
@@ -20,9 +25,14 @@ struct Annotation: Identifiable, Equatable {
             switch self {
             case .pen: return "scribble"
             case .arrow: return "arrow.up.right"
+            case .line: return "line.diagonal"
             case .rectangle: return "rectangle"
             case .ellipse: return "circle"
             case .highlight: return "highlighter"
+            case .spotlight: return "rectangle.inset.filled"
+            case .step: return "1.circle.fill"
+            case .mosaic: return "square.grid.3x3"
+            case .redact: return "rectangle.fill"
             case .text: return "character"
             }
         }
@@ -31,12 +41,20 @@ struct Annotation: Identifiable, Equatable {
             switch self {
             case .pen: return .toolPen
             case .arrow: return .toolArrow
+            case .line: return .toolLine
             case .rectangle: return .toolRectangle
             case .ellipse: return .toolEllipse
             case .highlight: return .toolHighlight
+            case .spotlight: return .toolSpotlight
+            case .step: return .toolStep
+            case .mosaic: return .toolMosaic
+            case .redact: return .toolRedact
             case .text: return .toolText
             }
         }
+
+        var usesSourcePixels: Bool { self == .mosaic || self == .redact }
+        var acceptsAPIPoints: Bool { self != .text && self != .step && !usesSourcePixels }
 
         var tracksEveryPoint: Bool { self == .pen || self == .highlight }
     }
@@ -49,6 +67,9 @@ struct Annotation: Identifiable, Equatable {
     var width: Double
     var text: String? = nil
     var arrowHead: Double? = nil
+    var stepNumber: Int? = nil
+    var mosaicBlockSize: Double? = nil
+    var mosaicPatch: CGImage? = nil
 
     static let palette: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .black, .white]
     static let colorNames = ["red", "orange", "yellow", "green", "blue", "purple", "black", "white"]
@@ -61,6 +82,13 @@ struct Annotation: Identifiable, Equatable {
         let a = CGPoint(x: first.x * size.width, y: first.y * size.height)
         let b = CGPoint(x: last.x * size.width, y: last.y * size.height)
         return CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(b.x - a.x), height: abs(b.y - a.y))
+    }
+
+    func stepRect(in size: CGSize) -> CGRect {
+        guard let center = points.first else { return .zero }
+        let diameter = width * size.width
+        return CGRect(x: center.x * size.width - diameter / 2, y: center.y * size.height - diameter / 2,
+                      width: diameter, height: diameter)
     }
 
     func rebased(to crop: CGRect) -> Self {
@@ -77,7 +105,7 @@ extension Annotation {
     /// top-left, which is the space annotations already live in.
     init?(dict: [String: Any]) {
         guard let rawKind = (dict["kind"] as? String)?.lowercased(),
-              let kind = Kind(rawValue: rawKind), kind != .text,
+              let kind = Kind(rawValue: rawKind), kind.acceptsAPIPoints,
               let rawPoints = dict["points"] as? [[String: Any]] else { return nil }
 
         let points = rawPoints.compactMap { point -> CGPoint? in
@@ -118,8 +146,22 @@ enum ImageFit {
 
 enum AnnotationRenderer {
 
-    static func draw(_ annotations: [Annotation], in context: inout GraphicsContext, size: CGSize) {
-        for annotation in annotations {
+    static func draw(_ annotations: [Annotation], live: Annotation? = nil,
+                     in context: inout GraphicsContext, size: CGSize) {
+        let marks = annotations + (live.map { [$0] } ?? [])
+        let bounds = CGRect(origin: .zero, size: size)
+        var lit = Path()
+        for mark in marks where mark.kind == .spotlight {
+            let rect = mark.boundingRect(in: size).intersection(bounds)
+            if !rect.isEmpty { lit.addRect(rect) }
+        }
+        if !lit.isEmpty {
+            var shade = context
+            shade.clip(to: lit, options: .inverse)
+            shade.fill(Path(bounds), with: .color(.black.opacity(0.55)))
+        }
+
+        for annotation in marks {
             let width = annotation.width * size.width
             let color = annotation.color
 
@@ -141,12 +183,35 @@ enum AnnotationRenderer {
             case .ellipse:
                 context.stroke(Path(ellipseIn: annotation.boundingRect(in: size)), with: .color(color),
                                style: StrokeStyle(lineWidth: width))
-            case .arrow:
+            case .line, .arrow:
                 guard let start = annotation.points.first, let end = annotation.points.last else { continue }
-                let path = arrowPath(from: denormalize(start, size), to: denormalize(end, size),
-                                     head: (annotation.arrowHead ?? max(annotation.width * 4, 0.012)) * size.width)
+                let from = denormalize(start, size)
+                let to = denormalize(end, size)
+                var path = Path()
+                path.move(to: from)
+                path.addLine(to: to)
+                if annotation.kind == .arrow {
+                    let head = (annotation.arrowHead ?? max(annotation.width * 4, 0.012)) * size.width
+                    path = arrowPath(from: from, to: to, head: head)
+                }
                 context.stroke(path, with: .color(color),
                                style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+            case .step:
+                guard let number = annotation.stepNumber else { continue }
+                let rect = annotation.stepRect(in: size)
+                context.fill(Path(ellipseIn: rect), with: .color(color))
+                let digits = String(number)
+                let label = Text(verbatim: digits)
+                    .font(.system(size: width * min(0.6, 1.15 / Double(digits.count)), weight: .bold))
+                    .foregroundColor(annotation.colorIndex == 7 || annotation.colorIndex == 2 ? .black : .white)
+                context.draw(label, at: CGPoint(x: rect.midX, y: rect.midY))
+            case .mosaic:
+                guard let patch = annotation.mosaicPatch else { continue }
+                let image = Image(decorative: patch, scale: 1).interpolation(.none)
+                context.draw(image, in: annotation.boundingRect(in: size))
+            case .redact:
+                context.fill(Path(annotation.boundingRect(in: size)), with: .color(.black))
+            case .spotlight: continue
             case .text:
                 guard let text = annotation.text, let start = annotation.points.first else { continue }
                 let label = Text(verbatim: text).font(.system(size: width)).foregroundColor(color)
@@ -201,8 +266,7 @@ struct AnnotatedImage: View {
                 Canvas { context, size in
                     var ctx = context
                     ctx.clip(to: Path(CGRect(origin: .zero, size: size)))
-                    AnnotationRenderer.draw(annotations, in: &ctx, size: size)
-                    if let live { AnnotationRenderer.draw([live], in: &ctx, size: size) }
+                    AnnotationRenderer.draw(annotations, live: live, in: &ctx, size: size)
                 }
             }
     }
