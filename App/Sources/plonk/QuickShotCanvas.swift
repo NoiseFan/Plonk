@@ -174,7 +174,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     }
 
     func perform(_ action: QuickShotAction) {
-        guard commitText(), let rect, let image = bitmap.crop(rect) else { return }
+        guard controls.commitDimensions(), commitText(), let rect, let image = bitmap.crop(rect) else { return }
         if case .recognizeText = action, recognizedText != nil {
             dismissRecognition()
             return
