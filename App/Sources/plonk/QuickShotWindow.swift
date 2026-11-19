@@ -6,13 +6,13 @@ final class QuickShotWindow: NSWindow {
     var onScrollKey: ((Bool) -> Void)?
     var onCancel: (() -> Void)?
 
-    init(screen: NSScreen, bitmap: ShotBitmap, accent: NSColor) {
+    init(screen: NSScreen, bitmap: ShotBitmap, accent: NSColor, fixed: Bool = false) {
         let frame = screen.frame
         let visible = screen.visibleFrame
         canvas = QuickShotCanvas(bitmap: bitmap, frame: CGRect(origin: .zero, size: frame.size),
                                 safeArea: CGRect(x: visible.minX - frame.minX, y: frame.maxY - visible.maxY,
                                                  width: visible.width, height: visible.height),
-                                accent: accent)
+                                accent: accent, fixed: fixed)
         super.init(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         setFrame(frame, display: false)
         level = .screenSaver

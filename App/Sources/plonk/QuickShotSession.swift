@@ -19,14 +19,39 @@ final class QuickShotSession: NSObject {
         self.onPresented = onPresented
     }
 
-    func begin() {
+    func begin(_ mode: CaptureMode) {
         let screens = NSScreen.screens
         guard !screens.isEmpty else { return failCapture() }
         NotificationCenter.default.addObserver(
             self, selector: #selector(close), name: NSApplication.didChangeScreenParametersNotification, object: NSApp
         )
         // Give the window server a turn after ordering Plonk's windows out.
-        DispatchQueue.main.async { [weak self] in self?.capture(screens) }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, onClose != nil else { return }
+            if mode == .region {
+                capture(screens)
+            } else {
+                captureFixed(mode)
+            }
+        }
+    }
+
+    private func captureFixed(_ mode: CaptureMode) {
+        ScreenshotManager.capture(mode) { [weak self] image in
+            guard let self, onClose != nil else { return }
+            guard let image else {
+                if mode == .window { close() } else { failCapture() }
+                return
+            }
+            let screen = mode == .window
+                ? NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) }
+                : NSScreen.screens.first
+            guard let bitmap = ShotBitmap(image), let screen = screen ?? NSScreen.main else {
+                return failCapture()
+            }
+            addWindow(screen: screen, bitmap: bitmap, fixed: true)
+            present()
+        }
     }
 
     private func capture(_ screens: [NSScreen]) {
@@ -36,14 +61,19 @@ final class QuickShotSession: NSObject {
             ScreenshotManager.captureRegion(CGSpace.flip(screen.frame)) { [weak self] image in
                 guard let self, onClose != nil else { return }
                 guard let image, let bitmap = ShotBitmap(image) else { return failCapture() }
-                let window = QuickShotWindow(screen: screen, bitmap: bitmap, accent: config().appearance.accent)
-                window.onCancel = { [weak self] in self?.close() }
-                configure(window)
-                windows.append(window)
+                addWindow(screen: screen, bitmap: bitmap, fixed: false)
                 pending -= 1
                 if pending == 0 { present() }
             }
         }
+    }
+
+    private func addWindow(screen: NSScreen, bitmap: ShotBitmap, fixed: Bool) {
+        let window = QuickShotWindow(screen: screen, bitmap: bitmap,
+                                     accent: config().appearance.accent, fixed: fixed)
+        window.onCancel = { [weak self] in self?.close() }
+        configure(window)
+        windows.append(window)
     }
 
     private func configure(_ window: QuickShotWindow) {
