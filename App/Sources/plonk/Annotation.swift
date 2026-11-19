@@ -14,6 +14,7 @@ struct Annotation: Identifiable, Equatable {
         case ellipse
         case highlight
         case spotlight
+        case step
         case text
 
         var id: String { rawValue }
@@ -27,6 +28,7 @@ struct Annotation: Identifiable, Equatable {
             case .ellipse: return "circle"
             case .highlight: return "highlighter"
             case .spotlight: return "rectangle.inset.filled"
+            case .step: return "1.circle.fill"
             case .text: return "character"
             }
         }
@@ -40,6 +42,7 @@ struct Annotation: Identifiable, Equatable {
             case .ellipse: return .toolEllipse
             case .highlight: return .toolHighlight
             case .spotlight: return .toolSpotlight
+            case .step: return .toolStep
             case .text: return .toolText
             }
         }
@@ -55,6 +58,7 @@ struct Annotation: Identifiable, Equatable {
     var width: Double
     var text: String? = nil
     var arrowHead: Double? = nil
+    var stepNumber: Int? = nil
 
     static let palette: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .black, .white]
     static let colorNames = ["red", "orange", "yellow", "green", "blue", "purple", "black", "white"]
@@ -67,6 +71,13 @@ struct Annotation: Identifiable, Equatable {
         let a = CGPoint(x: first.x * size.width, y: first.y * size.height)
         let b = CGPoint(x: last.x * size.width, y: last.y * size.height)
         return CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(b.x - a.x), height: abs(b.y - a.y))
+    }
+
+    func stepRect(in size: CGSize) -> CGRect {
+        guard let center = points.first else { return .zero }
+        let diameter = width * size.width
+        return CGRect(x: center.x * size.width - diameter / 2, y: center.y * size.height - diameter / 2,
+                      width: diameter, height: diameter)
     }
 
     func rebased(to crop: CGRect) -> Self {
@@ -83,7 +94,7 @@ extension Annotation {
     /// top-left, which is the space annotations already live in.
     init?(dict: [String: Any]) {
         guard let rawKind = (dict["kind"] as? String)?.lowercased(),
-              let kind = Kind(rawValue: rawKind), kind != .text,
+              let kind = Kind(rawValue: rawKind), kind != .text, kind != .step,
               let rawPoints = dict["points"] as? [[String: Any]] else { return nil }
 
         let points = rawPoints.compactMap { point -> CGPoint? in
@@ -174,6 +185,15 @@ enum AnnotationRenderer {
                 }
                 context.stroke(path, with: .color(color),
                                style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+            case .step:
+                guard let number = annotation.stepNumber else { continue }
+                let rect = annotation.stepRect(in: size)
+                context.fill(Path(ellipseIn: rect), with: .color(color))
+                let digits = String(number)
+                let label = Text(verbatim: digits)
+                    .font(.system(size: width * min(0.6, 1.15 / Double(digits.count)), weight: .bold))
+                    .foregroundColor(annotation.colorIndex == 7 || annotation.colorIndex == 2 ? .black : .white)
+                context.draw(label, at: CGPoint(x: rect.midX, y: rect.midY))
             case .spotlight: continue
             case .text:
                 guard let text = annotation.text, let start = annotation.points.first else { continue }
