@@ -110,14 +110,14 @@ extension AppDelegate {
         guard !text.isEmpty else { return }
         let response = router.dispatch(prompt: text)
         let agent = (response.json["agent"] as? String) ?? String(localized: .paletteTheAgent)
-        if response.json["error"] != nil {
+        if let error = response.json["error"] as? String {
             // Router answers an API caller, and tells it to pass an "agent"
             // field. There is no field here — there is a menu.
-            HUD.shared.show(store.config.selectedAgent == nil ? .hudNoActiveAgent : .hudWentNowhere)
-        } else if response.json["note"] != nil {
+            HUD.shared.show(store.config.selectedAgent == nil ? String(localized: .hudNoActiveAgent) : error)
+        } else if let note = response.json["note"] as? String {
             // Queued for a session that has never connected. Saying "→ agent"
             // here would be the silent success this was meant to stop.
-            HUD.shared.show(.hudWaitingFor(agent))
+            HUD.shared.show(.hudWaitingFor(agent, note))
         } else {
             HUD.shared.show(.hudSentTo(agent, text))
         }

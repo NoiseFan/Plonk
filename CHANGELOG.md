@@ -25,6 +25,7 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Changed
 
+- Agent command feedback again displays the router's error or queue note.
 - The Simplified Chinese translation now calls window zones “分屏” and the pointer “鼠标”.
 
 ## 0.4.3 — 2026-09-22

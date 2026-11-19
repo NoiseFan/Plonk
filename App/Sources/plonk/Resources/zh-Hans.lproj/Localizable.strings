@@ -688,7 +688,7 @@
 "hud.urlUnreadable" = "此 URL 未指定操作";
 "hud.urlUnknown %@" = "找不到名为 %@ 的操作";
 "hud.urlZoneSet %@" = "%@ 是分屏布局。请使用 zone-1 到 zone-9";
-"hud.waitingFor %@" = "正在等待 %@ 连接，请求已加入队列。";
+"hud.waitingFor %@ %@" = "正在等待 %1$@ 连接：%2$@";
 "hud.sentTo %@ %@" = "→ %1$@：%2$@";
 "hud.working %@ %@ %lld" = "%1$@ 正在处理 %2$@ · %3$lld 秒";
 "hud.finished %@ %lld" = "✓ %1$@ 已完成，用时 %2$lld 秒";
