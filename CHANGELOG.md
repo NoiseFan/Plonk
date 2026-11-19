@@ -6,6 +6,7 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Added
 
+- Manual window and full-screen captures can open the quick actions toolbar for markup, text recognition, and export.
 - Region captures open on-screen quick actions by default. Move or resize the selection, enter exact pixel dimensions, lock its aspect ratio, and copy or save the result. The screenshot settings also offer opening the editor directly.
 - Use scrolling capture from a region selection to stitch a long screenshot as you scroll down. Press Enter to finish or Escape to return to the selection.
 - Mark up a region in place with rectangles, ellipses, arrows, freehand strokes, and text, with undo and redo.
