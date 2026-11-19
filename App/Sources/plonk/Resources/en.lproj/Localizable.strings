@@ -622,6 +622,7 @@
 "tool.ellipse" = "Ellipse";
 "tool.spotlight" = "Spotlight";
 "tool.highlight" = "Highlight";
+"tool.step" = "Step Number";
 "tool.text" = "Text";
 "shotEditor.color %lld" = "Color %lld";
 

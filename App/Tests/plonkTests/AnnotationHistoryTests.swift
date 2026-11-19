@@ -3,6 +3,30 @@ import Testing
 @testable import plonk
 
 struct AnnotationHistoryTests {
+    @Test func stepEditsPreserveNumbersAcrossCropsAndUndo() throws {
+        var history = AnnotationHistory()
+        let point = CGPoint(x: 0.5, y: 0.5)
+        history.addStep(at: point, color: 0, diameter: 0.025)
+        let middle = history.addStep(at: point, color: 0, diameter: 0.025)
+        history.addStep(at: point, color: 0, diameter: 0.025)
+        var moved = middle
+        moved.points = [CGPoint(x: 0.75, y: 0.5)]
+        history.editStep(middle, replacement: moved)
+        history.editStep(moved, replacement: nil)
+        #expect(history.annotations.compactMap(\.stepNumber) == [1, 3])
+
+        var cropped = history.rebased(to: CGRect(x: 0.25, y: 0, width: 0.5, height: 1))
+        cropped.undo()
+        #expect(cropped.annotations[1].points == [CGPoint(x: 1, y: 0.5)])
+        cropped.undo()
+        #expect(cropped.annotations[1].points == [point])
+        cropped.redo()
+        cropped.redo()
+        #expect(cropped.annotations.compactMap(\.stepNumber) == [1, 3])
+        let next = cropped.addStep(at: point, color: 0, diameter: 0.05)
+        #expect(next.stepNumber == 4)
+    }
+
     @Test func handoffPreservesThePositionAndSizeOfMarksOutsideTheCrop() throws {
         var history = AnnotationHistory()
         history.begin(.arrow, at: CGPoint(x: 0.125, y: 0.125), color: 0, width: 0.002)

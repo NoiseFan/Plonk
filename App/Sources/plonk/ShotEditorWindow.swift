@@ -27,6 +27,7 @@ final class ShotEditorWindow: NSWindow {
         case .cancel:
             if !editor.canvas.cancelText() { close() }
         case .select(let kind): editor.selectTool(kind)
+        case .deleteStep: editor.canvas.deleteStep()
         case .undo: editor.canvas.undoMark()
         case .redo: editor.canvas.redoMark()
         case .tab(let backward):

@@ -62,6 +62,7 @@ final class QuickShotWindow: NSWindow {
             if !canvas.cancelText() && !canvas.dismissRecognition() { onCancel?() }
         case .select(let kind): canvas.selectTool(kind)
         case .action(let action): canvas.perform(action)
+        case .deleteStep: canvas.deleteStep()
         case .undo: canvas.undoMark()
         case .redo: canvas.redoMark()
         case .tab(let backward):
