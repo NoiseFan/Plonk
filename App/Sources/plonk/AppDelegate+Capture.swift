@@ -65,7 +65,7 @@ extension AppDelegate {
         }
     }
 
-    func beginQuickShot() {
+    func beginQuickShot(_ mode: CaptureMode) {
         guard quickShot == nil, captureDepth == 0 else { return }
         shotKeyboard.beginPreparing()
         let hidden = hideOwnWindows()
@@ -82,7 +82,7 @@ extension AppDelegate {
                                            self?.shotKeyboard.finishedPreparing()
                                        })
         quickShot = session
-        session.begin()
+        session.begin(mode)
     }
 
     /// Everything Plonk has on screen, ordered out so it cannot end up in a

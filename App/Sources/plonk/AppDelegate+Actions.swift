@@ -37,8 +37,8 @@ extension AppDelegate: AppActions {
     }
 
     func capture(_ mode: CaptureMode) {
-        if mode == .region, store.config.shotAfterCapture == .quickActions {
-            beginQuickShot()
+        if store.config.shotAfterCapture == .quickActions {
+            beginQuickShot(mode)
         } else {
             runCapture(mode, openEditor: true)
         }
