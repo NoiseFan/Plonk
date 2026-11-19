@@ -60,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         store.load()
+        ScreenshotManager.cleanPreviewFiles()
         applyAppearance()
         windows.promptForTrust()
 

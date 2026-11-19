@@ -12,6 +12,12 @@ struct ShotSelectionTests {
         #expect(config.shotFolder == "~/Pictures")
     }
 
+    @Test func unknownCapturePreferenceKeepsOtherSettings() throws {
+        let config = try Config.decode(Data(#"{"shotAfterCapture":"later","shotFolder":"~/Pictures"}"#.utf8))
+        #expect(config.shotAfterCapture == .quickActions)
+        #expect(config.shotFolder == "~/Pictures")
+    }
+
     @Test func retinaPointsMapToTheDisplayBitmap() {
         let point = selection.pixelPoint(CGPoint(x: 142.5, y: 80))
         #expect(point == CGPoint(x: 285, y: 160))
@@ -56,5 +62,6 @@ struct ShotSelectionTests {
         let png = try #require(NSBitmapImageRep(data: data))
         #expect(png.pixelsWide == 800)
         #expect(png.pixelsHigh == 600)
+        #expect(image.size == CGSize(width: CGFloat(800 / scale), height: CGFloat(600 / scale)))
     }
 }

@@ -3,6 +3,16 @@ import Testing
 @testable import plonk
 
 struct AnnotationHistoryTests {
+    @Test func newMarkClearsRedoHistory() {
+        var history = AnnotationHistory()
+        history.addStep(at: CGPoint(x: 0.2, y: 0.2), color: 0, diameter: 0.025)
+        history.undo()
+        #expect(history.canRedo)
+        history.addStep(at: CGPoint(x: 0.7, y: 0.7), color: 0, diameter: 0.025)
+        #expect(!history.canRedo)
+        #expect(history.annotations.count == 1)
+    }
+
     @Test func stepEditsPreserveNumbersAcrossCropsAndUndo() throws {
         var history = AnnotationHistory()
         let point = CGPoint(x: 0.5, y: 0.5)

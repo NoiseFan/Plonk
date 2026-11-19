@@ -21,6 +21,10 @@ extension AppDelegate {
             default: break
             }
         }
+        hotkeys.onSuspend = { [weak self] in
+            self?.voice.finishCapture()
+            self?.dragSnap.endPick()
+        }
         hotkeys.apply(store.config)
         noticeRectangle()
     }

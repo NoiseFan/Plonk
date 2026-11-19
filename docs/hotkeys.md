@@ -27,6 +27,10 @@
 | `⌃⌥V` | Hold to talk |
 | `⌃⌥A` | Command palette — run anything by name, or type a sentence for the agent |
 
+## Screenshot quick actions
+
+While a screenshot selection has focus, press `1`–`0` to select a markup tool, `S` for scrolling capture, `P` to open Preview, `O` to recognize text, or `W` to open the editor. Press `↩` or Space to copy, `⌘S` to save, and `⌘⇧S` to save and copy. `⌘Z` and `⌘⇧Z` undo and redo annotations. Escape cancels.
+
 ## Without a key
 
 Every one of these has a name, and a URL that runs it. Useful where a keyboard

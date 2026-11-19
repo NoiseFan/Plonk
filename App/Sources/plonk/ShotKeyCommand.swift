@@ -12,8 +12,8 @@ enum ShotKeyCommand {
 
     init?(event: NSEvent, window: NSWindow, canvas: ShotMarkupCanvas) {
         let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
-        let key = event.charactersIgnoringModifiers?.lowercased()
-        if key == "s", flags == .command || flags == [.command, .shift] {
+        let code = Int(event.keyCode)
+        if code == kVK_ANSI_S, flags == .command || flags == [.command, .shift] {
             self = .action(.save(forceCopy: flags.contains(.shift)))
             return
         }
@@ -22,7 +22,7 @@ enum ShotKeyCommand {
             return
         }
         guard window.firstResponder === canvas else { return nil }
-        if key == "z", flags == .command || flags == [.command, .shift] {
+        if code == kVK_ANSI_Z, flags == .command || flags == [.command, .shift] {
             self = flags.contains(.shift) ? .redo : .undo
             return
         }
@@ -31,28 +31,28 @@ enum ShotKeyCommand {
             return
         }
         guard flags.isEmpty else { return nil }
-        switch Int(event.keyCode) {
+        switch code {
         case kVK_Return, kVK_ANSI_KeypadEnter, kVK_Space:
             self = .action(.copy)
         case kVK_Delete, kVK_ForwardDelete:
             guard canvas.canDeleteStep else { return nil }
             self = .deleteStep
         default:
-            switch key {
-            case "1": self = .select(.rectangle)
-            case "2": self = .select(.ellipse)
-            case "3": self = .select(.line)
-            case "4": self = .select(.arrow)
-            case "5": self = .select(.pen)
-            case "6": self = .select(.spotlight)
-            case "7": self = .select(.text)
-            case "8": self = .select(.step)
-            case "9": self = .select(.mosaic)
-            case "0": self = .select(.redact)
-            case "s": self = .action(.scroll)
-            case "p": self = .action(.preview)
-            case "o": self = .action(.recognizeText)
-            case "w": self = .action(.editor)
+            switch code {
+            case kVK_ANSI_1: self = .select(.rectangle)
+            case kVK_ANSI_2: self = .select(.ellipse)
+            case kVK_ANSI_3: self = .select(.line)
+            case kVK_ANSI_4: self = .select(.arrow)
+            case kVK_ANSI_5: self = .select(.pen)
+            case kVK_ANSI_6: self = .select(.spotlight)
+            case kVK_ANSI_7: self = .select(.text)
+            case kVK_ANSI_8: self = .select(.step)
+            case kVK_ANSI_9: self = .select(.mosaic)
+            case kVK_ANSI_0: self = .select(.redact)
+            case kVK_ANSI_S: self = .action(.scroll)
+            case kVK_ANSI_P: self = .action(.preview)
+            case kVK_ANSI_O: self = .action(.recognizeText)
+            case kVK_ANSI_W: self = .action(.editor)
             default: return nil
             }
         }

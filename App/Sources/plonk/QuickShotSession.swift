@@ -8,6 +8,7 @@ final class QuickShotSession: NSObject {
     private var onClose: (() -> Void)?
     private var scrolling: ScrollShotCapture?
     private var windows: [QuickShotWindow] = []
+    private var previousApplication: NSRunningApplication?
 
     init(config: @escaping () -> Config, onFinish: @escaping (Bool, String?) -> Void,
          onEditor: @escaping (NSImage, AnnotationHistory) -> Void,
@@ -20,6 +21,7 @@ final class QuickShotSession: NSObject {
     }
 
     func begin(_ mode: CaptureMode) {
+        previousApplication = NSWorkspace.shared.frontmostApplication
         let screens = NSScreen.screens
         guard !screens.isEmpty else { return failCapture() }
         NotificationCenter.default.addObserver(
@@ -246,5 +248,9 @@ final class QuickShotSession: NSObject {
         }
         windows.removeAll()
         onClose()
+        if NSApp.isActive, let previousApplication,
+           previousApplication.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            previousApplication.activate(options: [.activateIgnoringOtherApps])
+        }
     }
 }

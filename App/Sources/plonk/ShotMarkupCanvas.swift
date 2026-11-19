@@ -54,6 +54,16 @@ class ShotMarkupCanvas: NSView {
                                           renderedMosaic: renderedMosaic)
     }
 
+    func clearMarkup() {
+        _ = cancelText()
+        history = AnnotationHistory()
+        selectedStep = nil
+        stepDrag = nil
+        renderedMosaic = nil
+        updateMarkup()
+        onHistoryChanged?(history)
+    }
+
     @discardableResult
     func beginMark(at point: CGPoint) -> Bool {
         guard let tool, markupClip.contains(point), imageRect.width > 0 else { return false }

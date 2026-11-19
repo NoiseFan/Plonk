@@ -22,6 +22,9 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Fixed
 
+- Screenshot shortcuts work with non-US keyboard layouts, selection changes discard earlier annotations, and cancelling quick actions returns focus to the previous app.
+- Screenshot crops preserve their point size on Retina displays, and Preview captures are removed when Plonk next starts.
+- Pausing global hotkeys ends push-to-talk and the zone picker.
 - Scrolling capture explains whether the selection is too small or Accessibility access is required.
 
 ### Changed

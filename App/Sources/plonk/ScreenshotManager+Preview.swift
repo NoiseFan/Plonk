@@ -1,6 +1,15 @@
 import AppKit
 
 extension ScreenshotManager {
+    static func cleanPreviewFiles() {
+        let directory = FileManager.default.temporaryDirectory
+        if let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
+            for file in files where file.lastPathComponent.hasPrefix("plonk-preview-") && file.pathExtension == "png" {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
+    }
+
     static func openInPreview(_ image: NSImage, completion: @escaping (Bool) -> Void) {
         let workspace = NSWorkspace.shared
         let url = FileManager.default.temporaryDirectory
@@ -12,8 +21,7 @@ extension ScreenshotManager {
         }
         workspace.open([url], withApplicationAt: preview, configuration: .init()) { _, error in
             DispatchQueue.main.async { completion(error == nil) }
-            // Launch completion can precede Preview reading the document.
-            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + (error == nil ? 1800 : 0)) {
+            if error != nil {
                 try? FileManager.default.removeItem(at: url)
             }
         }

@@ -78,6 +78,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
         dragging = false
         controls.resetLock()
         rect = nil
+        clearMarkup()
         tools.select(nil)
     }
 
@@ -129,9 +130,11 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     }
 
     override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        let chrome = [controls.dimensions, controls.toolbar, controls.feedback]
+        guard !chrome.contains(where: { !$0.isHidden && $0.frame.contains(point) }) else { return }
         guard commitText() else { return }
         window?.makeFirstResponder(self)
-        let point = convert(event.locationInWindow, from: nil)
         if fixed { _ = beginMark(at: point); return }
         anchor = geometry.pixelPoint(point)
         original = nil

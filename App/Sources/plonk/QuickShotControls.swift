@@ -179,6 +179,14 @@ final class QuickShotControls: NSObject, NSTextFieldDelegate {
         case #selector(NSResponder.insertNewline(_:)):
             _ = commit(control, textView: textView)
             return true
+        case #selector(NSResponder.insertTab(_:)), #selector(NSResponder.insertBacktab(_:)):
+            guard commit(control, textView: textView) else { return true }
+            if commandSelector == #selector(NSResponder.insertBacktab(_:)) {
+                control.window?.selectPreviousKeyView(control)
+            } else {
+                control.window?.selectNextKeyView(control)
+            }
+            return true
         case #selector(NSResponder.cancelOperation(_:)):
             onEndEditing?()
             return true
@@ -187,6 +195,9 @@ final class QuickShotControls: NSObject, NSTextFieldDelegate {
     }
 
     func controlTextDidEndEditing(_ obj: Notification) {
-        update(width: width, height: height)
+        guard let field = obj.object as? NSTextField else { return }
+        let value = Int(field.stringValue.trimmingCharacters(in: .whitespaces))
+        if let value, value > 0 { onResize?(value, field === widthField) }
+        else { update(width: width, height: height) }
     }
 }

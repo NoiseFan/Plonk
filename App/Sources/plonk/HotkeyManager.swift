@@ -28,6 +28,7 @@ final class HotkeyManager {
     var onAction: ((HotkeyAction) -> Void)?
     /// Fires when a bound key is released — what makes push-to-talk possible.
     var onActionUp: ((HotkeyAction) -> Void)?
+    var onSuspend: (() -> Void)?
 
     /// Take the settings as they now stand. Both halves guard on the value
     /// changing, so this is safe after every config write. Bindings first:
@@ -53,6 +54,7 @@ final class HotkeyManager {
         guard on != suspended else { return }
         suspended = on
         if on {
+            onSuspend?()
             unregister()
         } else if enabled {
             installHandlerIfNeeded()
