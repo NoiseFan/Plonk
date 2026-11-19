@@ -4,6 +4,11 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ## Unreleased
 
+### Added
+
+- Region captures open on-screen quick actions by default. Move or resize the selection, enter exact pixel dimensions, lock its aspect ratio, and copy or save the result. The screenshot settings also offer opening the editor directly.
+- Blue (`#0077F6`) is available as the first accent colour in Appearance.
+
 ### Changed
 
 - The Simplified Chinese translation now calls window zones “分屏” and the pointer “鼠标”.
