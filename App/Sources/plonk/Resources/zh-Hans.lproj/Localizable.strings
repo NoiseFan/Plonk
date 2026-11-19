@@ -77,6 +77,14 @@
 "shot.afterCapture" = "截图后";
 "shot.afterQuickActions" = "快捷操作";
 "shot.afterEditor" = "打开编辑器";
+"shot.scroll" = "滚动截图（S）";
+"shot.scrollStarting" = "正在准备滚动截图…";
+"shot.scrollReady" = "在选区内向下滚动，按 Enter 完成。";
+"shot.scrollPaused" = "拼接已暂停。请向上滚回，或按 Enter 完成。";
+"shot.scrollFull" = "已达到长度上限，按 Enter 完成。";
+"shot.scrollFinishing" = "正在生成长图…";
+"shot.scrollFailed" = "取帧已停止。按 Enter 使用已有内容，或按 Esc 返回。";
+"shot.scrollUnavailable" = "滚动截图需要辅助功能权限，选区至少为 32 × 32 像素。";
 "shot.selectionWidth" = "选区宽度";
 "shot.selectionHeight" = "选区高度";
 "shot.selectionPixels" = "px";

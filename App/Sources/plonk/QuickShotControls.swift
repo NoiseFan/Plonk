@@ -17,7 +17,7 @@ final class QuickShotControls: NSObject, NSTextFieldDelegate {
     private var width = 0
     private var height = 0
 
-    override init() {
+    init(fixed: Bool) {
         super.init()
         setup(widthField, title: .shotSelectionWidth)
         setup(heightField, title: .shotSelectionHeight)
@@ -32,6 +32,9 @@ final class QuickShotControls: NSObject, NSTextFieldDelegate {
         message.widthAnchor.constraint(lessThanOrEqualToConstant: 320).isActive = true
         feedback.stack.addArrangedSubview(message)
         addButton(symbol: "xmark", title: .commonCancel, action: #selector(cancel))
+        if !fixed {
+            addButton(symbol: "arrow.up.and.down", title: .shotScroll, action: #selector(scrollCapture))
+        }
         addButton(symbol: "photo", title: .shotOpenPreview, action: #selector(openPreview))
         addButton(symbol: "text.viewfinder", title: .shotText, action: #selector(recognizeText))
         addButton(symbol: "macwindow", title: .shotAfterEditor, action: #selector(openEditor))
@@ -140,6 +143,7 @@ final class QuickShotControls: NSObject, NSTextFieldDelegate {
         onLock?(lock.state == .on)
     }
 
+    @objc private func scrollCapture() { onAction?(.scroll) }
     @objc private func openEditor() { onAction?(.editor) }
     @objc private func openPreview() { onAction?(.preview) }
     @objc private func recognizeText() { onAction?(.recognizeText) }

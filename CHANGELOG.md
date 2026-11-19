@@ -7,6 +7,7 @@ What changed in each release, from a user's side. The commit log has the rest.
 ### Added
 
 - Region captures open on-screen quick actions by default. Move or resize the selection, enter exact pixel dimensions, lock its aspect ratio, and copy or save the result. The screenshot settings also offer opening the editor directly.
+- Use scrolling capture from a region selection to stitch a long screenshot as you scroll down. Press Enter to finish or Escape to return to the selection.
 - Mark up a region in place with rectangles, ellipses, arrows, freehand strokes, and text, with undo and redo.
 - Open a region in the screenshot editor and continue editing or undoing its existing annotations.
 - Select and copy recognized text directly on the screenshot, open the annotated PNG in Preview, or choose a save location.
