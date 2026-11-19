@@ -6,6 +6,7 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Added
 
+- Draw straight lines in screenshot markup. Press 3 to select the tool.
 - Drag one or more spotlight rectangles in a screenshot to dim the surrounding image. Press 6 to select the tool.
 - Region captures open on-screen quick actions by default. Move or resize the selection, enter exact pixel dimensions, lock its aspect ratio, and copy or save the result. The screenshot settings also offer opening the editor directly.
 - Use scrolling capture from a region selection to stitch a long screenshot as you scroll down. Press Enter to finish or Escape to return to the selection.

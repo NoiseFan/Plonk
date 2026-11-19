@@ -616,6 +616,7 @@
 "shotEditor.renderFailed" = "Could not render the annotations";
 "shotEditor.writeFailed" = "Could not write the file";
 "tool.pen" = "Pen";
+"tool.line" = "Line";
 "tool.arrow" = "Arrow";
 "tool.rectangle" = "Rectangle";
 "tool.ellipse" = "Ellipse";
