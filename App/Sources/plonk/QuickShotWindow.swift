@@ -2,7 +2,8 @@ import AppKit
 import Carbon.HIToolbox
 
 final class QuickShotWindow: NSWindow {
-    let canvas: QuickShotCanvas
+    private(set) var canvas: QuickShotCanvas
+    var onScrollKey: ((Bool) -> Void)?
     var onCancel: (() -> Void)?
 
     init(screen: NSScreen, bitmap: ShotBitmap, accent: NSColor) {
@@ -23,11 +24,38 @@ final class QuickShotWindow: NSWindow {
         canvas.onCancel = { [weak self] in self?.onCancel?() }
     }
 
+    func showScroll(_ view: ScrollShotView) {
+        isOpaque = false
+        backgroundColor = .clear
+        contentView = view
+        makeFirstResponder(view)
+    }
+
+    func showCanvas(_ replacement: QuickShotCanvas? = nil) {
+        if let replacement { canvas = replacement }
+        isOpaque = true
+        backgroundColor = .windowBackgroundColor
+        contentView = canvas
+        initialFirstResponder = canvas
+        makeFirstResponder(canvas)
+    }
+
     override var canBecomeKey: Bool { true }
 
     override func cancelOperation(_ sender: Any?) { onCancel?() }
 
     func handleShortcut(_ event: NSEvent) -> Bool {
+        if let onScrollKey {
+            let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
+            if flags.isEmpty && !event.isARepeat {
+                switch Int(event.keyCode) {
+                case kVK_Escape: onScrollKey(false)
+                case kVK_Return, kVK_ANSI_KeypadEnter: onScrollKey(true)
+                default: break
+                }
+            }
+            return true
+        }
         if canvas.recognizedText != nil,
            event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty,
            !event.isARepeat, event.keyCode == kVK_ANSI_O {

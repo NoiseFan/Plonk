@@ -77,6 +77,15 @@
 "shot.afterCapture" = "截图后";
 "shot.afterQuickActions" = "快捷操作";
 "shot.afterEditor" = "打开编辑器";
+"shot.scroll" = "滚动截图（S）";
+"shot.scrollStarting" = "正在准备滚动截图…";
+"shot.scrollReady" = "在选区内向下滚动，按 Enter 完成。";
+"shot.scrollPaused" = "拼接已暂停。请向上滚回，或按 Enter 完成。";
+"shot.scrollFull" = "已达到长度上限，按 Enter 完成。";
+"shot.scrollFinishing" = "正在生成长图…";
+"shot.scrollFailed" = "取帧已停止。按 Enter 使用已有内容，或按 Esc 返回。";
+"shot.scrollRegionTooSmall" = "请选择至少 32 × 32 像素的区域。";
+"shot.scrollNeedsAccessibility" = "请在系统设置中授予 Plonk 辅助功能权限，再启动滚动截图。";
 "shot.selectionWidth" = "选区宽度";
 "shot.selectionHeight" = "选区高度";
 "shot.selectionPixels" = "px";

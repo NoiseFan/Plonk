@@ -2,6 +2,7 @@ import AppKit
 
 final class QuickShotCanvas: ShotMarkupCanvas {
     var onSelect: (() -> Void)?
+    var onStartScroll: (() -> Void)?
     var onCancel: (() -> Void)?
     var onAction: ((NSImage, AnnotationHistory, QuickShotAction) -> Void)?
 
@@ -9,7 +10,10 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     private let backdrop: NSImage
     private let geometry: ShotSelection
     private let safeArea: CGRect
-    let controls = QuickShotControls()
+let controls: QuickShotControls
+    private let fixed: Bool
+    var scrollRegion: CGRect? { fixed ? nil : rect.map(geometry.viewRect) }
+    var scrollPixels: CGSize? { rect?.size }
     private let accent: NSColor
     private lazy var tools = ShotMarkupTools(canvas: self, kinds: [.rectangle, .ellipse, .arrow, .pen, .text],
                                             includeSelection: true, accent: accent)
@@ -29,7 +33,9 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     private var handle = CGPoint.zero
     private var dragging = false
 
-    init(bitmap: ShotBitmap, frame: CGRect, safeArea: CGRect, accent: NSColor) {
+    init(bitmap: ShotBitmap, frame: CGRect, safeArea: CGRect, accent: NSColor, fixed: Bool = false) {
+        self.fixed = fixed
+        controls = QuickShotControls(fixed: fixed)
         self.bitmap = bitmap
         self.safeArea = safeArea
         self.accent = accent
@@ -48,11 +54,20 @@ final class QuickShotCanvas: ShotMarkupCanvas {
         controls.onCancel = { [weak self] in self?.onCancel?() }
         controls.onAction = { [weak self] action in self?.perform(action) }
         controls.onEndEditing = { [weak self] in self?.window?.makeFirstResponder(self) }
+        if fixed { rect = geometry.bounds }
         refresh()
     }
 
     required init?(coder: NSCoder) { nil }
-    override var markupClip: CGRect { rect.map(geometry.viewRect) ?? .zero }
+    override var imageRect: CGRect {
+        guard fixed else { return bounds }
+        let area = safeArea.insetBy(dx: 12, dy: 46)
+        let scale = min(area.width / bitmap.size.width, area.height / bitmap.size.height, 1)
+        let size = CGSize(width: bitmap.size.width * scale, height: bitmap.size.height * scale)
+        return CGRect(x: area.midX - size.width / 2, y: area.midY - size.height / 2,
+                      width: size.width, height: size.height)
+    }
+    override var markupClip: CGRect { fixed ? imageRect : rect.map(geometry.viewRect) ?? .zero }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     func clearSelection() {
@@ -64,6 +79,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     }
 
     override func resetCursorRects() {
+        guard !fixed else { return }
         addCursorRect(bounds, cursor: .crosshair)
         guard let rect else { return }
         addCursorRect(geometry.viewRect(rect), cursor: tool == .text ? .iBeam : tool == nil ? .openHand : .crosshair)
@@ -79,6 +95,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     }
 
     override func mouseMoved(with event: NSEvent) {
+        guard !fixed else { return }
         let point = convert(event.locationInWindow, from: nil)
         let chrome = [controls.dimensions, controls.toolbar, controls.feedback]
         guard !chrome.contains(where: { !$0.isHidden && $0.frame.contains(point) }),
@@ -112,6 +129,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
         guard commitText() else { return }
         window?.makeFirstResponder(self)
         let point = convert(event.locationInWindow, from: nil)
+        if fixed { _ = beginMark(at: point); return }
         anchor = geometry.pixelPoint(point)
         original = nil
         handle = .zero
@@ -174,11 +192,20 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     }
 
     func perform(_ action: QuickShotAction) {
-        guard controls.commitDimensions(), commitText(), let rect, let image = bitmap.crop(rect) else { return }
+        guard controls.commitDimensions(), commitText(), let rect else { return }
         if case .recognizeText = action, recognizedText != nil {
             dismissRecognition()
             return
         }
+        if case .scroll = action {
+            if !fixed { onStartScroll?() }
+            return
+        }
+        if fixed {
+            onAction?(NSImage(bitmap: bitmap.image), history, action)
+            return
+        }
+        guard let image = bitmap.crop(rect) else { return }
         let crop = CGRect(x: rect.minX / bitmap.size.width, y: rect.minY / bitmap.size.height,
                           width: rect.width / bitmap.size.width, height: rect.height / bitmap.size.height)
         onAction?(image, history.rebased(to: crop), action)
@@ -192,14 +219,21 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     func refresh() {
         needsDisplay = true
         updateMarkup()
-        controls.dimensions.isHidden = rect == nil
+        controls.dimensions.isHidden = fixed || rect == nil
         controls.toolbar.isHidden = rect == nil || dragging
         guard let rect else { return }
         controls.update(width: Int(rect.width), height: Int(rect.height))
-        controls.place(around: geometry.viewRect(rect), in: safeArea)
+        controls.place(around: markupClip, in: safeArea)
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        if fixed {
+            NSColor.black.withAlphaComponent(0.86).setFill()
+            bounds.fill()
+            backdrop.draw(in: imageRect, from: .zero, operation: .sourceOver, fraction: 1,
+                          respectFlipped: true, hints: nil)
+            return
+        }
         backdrop.draw(in: bounds, from: .zero, operation: .copy, fraction: 1, respectFlipped: true, hints: nil)
         let shade = NSBezierPath(rect: bounds)
         if let rect { shade.appendRect(geometry.viewRect(rect)) }
