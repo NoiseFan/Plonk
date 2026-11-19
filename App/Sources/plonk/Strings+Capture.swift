@@ -29,6 +29,12 @@ extension LocalizedStringResource {
     static let shotSelectionInvalid = Self.key("shot.selectionInvalid")
     static let shotCaptureFailed = Self.key("shot.captureFailed")
     static let shotCopyFailed = Self.key("shot.copyFailed")
+    static let shotOpenPreview = Self.key("shot.openPreview")
+    static let shotPreviewFailed = Self.key("shot.previewFailed")
+    static let shotSelectRecognizedText = Self.key("shot.selectRecognizedText")
+    static let shotCopiedRecognizedText = Self.key("shot.copiedRecognizedText")
+    static let shotRecognizing = Self.key("shot.recognizing")
+    static let shotRecognitionFailed = Self.key("shot.recognitionFailed")
 
     static let mousePointerHelp = Self.key("mouse.pointerHelp")
     static let mouseClicks = Self.key("mouse.clicks")
