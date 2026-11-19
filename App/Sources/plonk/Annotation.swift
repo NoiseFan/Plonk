@@ -9,6 +9,7 @@ struct Annotation: Identifiable, Equatable {
     enum Kind: String, CaseIterable, Identifiable {
         case pen
         case arrow
+        case line
         case rectangle
         case ellipse
         case highlight
@@ -21,6 +22,7 @@ struct Annotation: Identifiable, Equatable {
             switch self {
             case .pen: return "scribble"
             case .arrow: return "arrow.up.right"
+            case .line: return "line.diagonal"
             case .rectangle: return "rectangle"
             case .ellipse: return "circle"
             case .highlight: return "highlighter"
@@ -33,6 +35,7 @@ struct Annotation: Identifiable, Equatable {
             switch self {
             case .pen: return .toolPen
             case .arrow: return .toolArrow
+            case .line: return .toolLine
             case .rectangle: return .toolRectangle
             case .ellipse: return .toolEllipse
             case .highlight: return .toolHighlight
@@ -158,10 +161,17 @@ enum AnnotationRenderer {
             case .ellipse:
                 context.stroke(Path(ellipseIn: annotation.boundingRect(in: size)), with: .color(color),
                                style: StrokeStyle(lineWidth: width))
-            case .arrow:
+            case .line, .arrow:
                 guard let start = annotation.points.first, let end = annotation.points.last else { continue }
-                let path = arrowPath(from: denormalize(start, size), to: denormalize(end, size),
-                                     head: (annotation.arrowHead ?? max(annotation.width * 4, 0.012)) * size.width)
+                let from = denormalize(start, size)
+                let to = denormalize(end, size)
+                var path = Path()
+                path.move(to: from)
+                path.addLine(to: to)
+                if annotation.kind == .arrow {
+                    let head = (annotation.arrowHead ?? max(annotation.width * 4, 0.012)) * size.width
+                    path = arrowPath(from: from, to: to, head: head)
+                }
                 context.stroke(path, with: .color(color),
                                style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             case .spotlight: continue

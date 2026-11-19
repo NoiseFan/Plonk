@@ -37,6 +37,7 @@ enum ShotKeyCommand {
             switch key {
             case "1": self = .select(.rectangle)
             case "2": self = .select(.ellipse)
+            case "3": self = .select(.line)
             case "4": self = .select(.arrow)
             case "5": self = .select(.pen)
             case "6": self = .select(.spotlight)
