@@ -6,13 +6,13 @@ import { pointSchema } from "../schemas.js";
 export function register(server: McpServer): void {
   server.tool(
     "annotate_screenshot",
-    "Draw on a screenshot you already took, then copy it to the clipboard and show it to the user. Call take_screenshot first and LOOK at the image: you cannot know where anything is until you have seen it. Points are fractions 0..1 of the image, origin TOP-LEFT, so a rectangle around a left sidebar that is a seventh of the width and starts under the title bar is [{x:0,y:0.05},{x:0.14,y:1}]. Rectangle and ellipse take two opposite corners, arrow takes start then tip, pen and highlight take a run of points. Returns the marked image so you can check what you drew.",
+    "Draw on a screenshot you already took, then copy it to the clipboard and show it to the user. Call take_screenshot first and LOOK at the image: you cannot know where anything is until you have seen it. Points are fractions 0..1 of the image, origin TOP-LEFT, so a rectangle around a left sidebar that is a seventh of the width and starts under the title bar is [{x:0,y:0.05},{x:0.14,y:1}]. Rectangle, ellipse and spotlight take two opposite corners, arrow takes start then tip, pen and highlight take a run of points. Use spotlight to dim the image outside the combined spotlight regions, with other marks drawn above the dimming. Spotlight ignores color and width. Returns the marked image so you can check what you drew.",
     {
       path: z.string().describe("Path returned by take_screenshot"),
       marks: z
         .array(
           z.object({
-            kind: z.enum(["rectangle", "ellipse", "arrow", "pen", "highlight"]),
+            kind: z.enum(["rectangle", "ellipse", "arrow", "pen", "highlight", "spotlight"]),
             points: z.array(pointSchema).min(2),
             color: z
               .enum(["red", "orange", "yellow", "green", "blue", "purple", "black", "white"])

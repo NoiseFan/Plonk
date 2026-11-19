@@ -12,6 +12,7 @@ struct Annotation: Identifiable, Equatable {
         case rectangle
         case ellipse
         case highlight
+        case spotlight
         case text
 
         var id: String { rawValue }
@@ -23,6 +24,7 @@ struct Annotation: Identifiable, Equatable {
             case .rectangle: return "rectangle"
             case .ellipse: return "circle"
             case .highlight: return "highlighter"
+            case .spotlight: return "rectangle.inset.filled"
             case .text: return "character"
             }
         }
@@ -34,6 +36,7 @@ struct Annotation: Identifiable, Equatable {
             case .rectangle: return .toolRectangle
             case .ellipse: return .toolEllipse
             case .highlight: return .toolHighlight
+            case .spotlight: return .toolSpotlight
             case .text: return .toolText
             }
         }
@@ -118,8 +121,22 @@ enum ImageFit {
 
 enum AnnotationRenderer {
 
-    static func draw(_ annotations: [Annotation], in context: inout GraphicsContext, size: CGSize) {
-        for annotation in annotations {
+    static func draw(_ annotations: [Annotation], live: Annotation? = nil,
+                     in context: inout GraphicsContext, size: CGSize) {
+        let marks = annotations + (live.map { [$0] } ?? [])
+        let bounds = CGRect(origin: .zero, size: size)
+        var lit = Path()
+        for mark in marks where mark.kind == .spotlight {
+            let rect = mark.boundingRect(in: size).intersection(bounds)
+            if !rect.isEmpty { lit.addRect(rect) }
+        }
+        if !lit.isEmpty {
+            var shade = context
+            shade.clip(to: lit, options: .inverse)
+            shade.fill(Path(bounds), with: .color(.black.opacity(0.55)))
+        }
+
+        for annotation in marks {
             let width = annotation.width * size.width
             let color = annotation.color
 
@@ -147,6 +164,7 @@ enum AnnotationRenderer {
                                      head: (annotation.arrowHead ?? max(annotation.width * 4, 0.012)) * size.width)
                 context.stroke(path, with: .color(color),
                                style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+            case .spotlight: continue
             case .text:
                 guard let text = annotation.text, let start = annotation.points.first else { continue }
                 let label = Text(verbatim: text).font(.system(size: width)).foregroundColor(color)
@@ -201,8 +219,7 @@ struct AnnotatedImage: View {
                 Canvas { context, size in
                     var ctx = context
                     ctx.clip(to: Path(CGRect(origin: .zero, size: size)))
-                    AnnotationRenderer.draw(annotations, in: &ctx, size: size)
-                    if let live { AnnotationRenderer.draw([live], in: &ctx, size: size) }
+                    AnnotationRenderer.draw(annotations, live: live, in: &ctx, size: size)
                 }
             }
     }

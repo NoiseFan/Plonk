@@ -612,6 +612,7 @@
 "tool.arrow" = "箭头";
 "tool.rectangle" = "矩形";
 "tool.ellipse" = "椭圆";
+"tool.spotlight" = "区域高亮";
 "tool.highlight" = "荧光笔";
 "tool.text" = "文字";
 "shotEditor.color %lld" = "颜色 %lld";
