@@ -615,6 +615,8 @@
 "tool.ellipse" = "椭圆";
 "tool.spotlight" = "区域高亮";
 "tool.highlight" = "荧光笔";
+"tool.mosaic" = "马赛克";
+"tool.redact" = "不透明遮挡";
 "tool.step" = "步骤编号";
 "tool.text" = "文字";
 "shotEditor.color %lld" = "颜色 %lld";

@@ -6,6 +6,7 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Added
 
+- Drag over screenshot details with Mosaic or cover them with Opaque Redaction. Press 9 or 0 to select the tool.
 - Press 8 to place numbered steps in a screenshot. Drag an existing marker to move it, or select it and press Delete.
 - Manual window and full-screen captures can open the quick actions toolbar for markup, text recognition, and export.
 - Draw straight lines in screenshot markup. Press 3 to select the tool.

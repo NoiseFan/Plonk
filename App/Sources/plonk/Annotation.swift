@@ -15,6 +15,8 @@ struct Annotation: Identifiable, Equatable {
         case highlight
         case spotlight
         case step
+        case mosaic
+        case redact
         case text
 
         var id: String { rawValue }
@@ -29,6 +31,8 @@ struct Annotation: Identifiable, Equatable {
             case .highlight: return "highlighter"
             case .spotlight: return "rectangle.inset.filled"
             case .step: return "1.circle.fill"
+            case .mosaic: return "square.grid.3x3"
+            case .redact: return "rectangle.fill"
             case .text: return "character"
             }
         }
@@ -43,9 +47,14 @@ struct Annotation: Identifiable, Equatable {
             case .highlight: return .toolHighlight
             case .spotlight: return .toolSpotlight
             case .step: return .toolStep
+            case .mosaic: return .toolMosaic
+            case .redact: return .toolRedact
             case .text: return .toolText
             }
         }
+
+        var usesSourcePixels: Bool { self == .mosaic || self == .redact }
+        var acceptsAPIPoints: Bool { self != .text && self != .step && !usesSourcePixels }
 
         var tracksEveryPoint: Bool { self == .pen || self == .highlight }
     }
@@ -59,6 +68,8 @@ struct Annotation: Identifiable, Equatable {
     var text: String? = nil
     var arrowHead: Double? = nil
     var stepNumber: Int? = nil
+    var mosaicBlockSize: Double? = nil
+    var mosaicPatch: CGImage? = nil
 
     static let palette: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .black, .white]
     static let colorNames = ["red", "orange", "yellow", "green", "blue", "purple", "black", "white"]
@@ -94,7 +105,7 @@ extension Annotation {
     /// top-left, which is the space annotations already live in.
     init?(dict: [String: Any]) {
         guard let rawKind = (dict["kind"] as? String)?.lowercased(),
-              let kind = Kind(rawValue: rawKind), kind != .text, kind != .step,
+              let kind = Kind(rawValue: rawKind), kind.acceptsAPIPoints,
               let rawPoints = dict["points"] as? [[String: Any]] else { return nil }
 
         let points = rawPoints.compactMap { point -> CGPoint? in
@@ -194,6 +205,12 @@ enum AnnotationRenderer {
                     .font(.system(size: width * min(0.6, 1.15 / Double(digits.count)), weight: .bold))
                     .foregroundColor(annotation.colorIndex == 7 || annotation.colorIndex == 2 ? .black : .white)
                 context.draw(label, at: CGPoint(x: rect.midX, y: rect.midY))
+            case .mosaic:
+                guard let patch = annotation.mosaicPatch else { continue }
+                let image = Image(decorative: patch, scale: 1).interpolation(.none)
+                context.draw(image, in: annotation.boundingRect(in: size))
+            case .redact:
+                context.fill(Path(annotation.boundingRect(in: size)), with: .color(.black))
             case .spotlight: continue
             case .text:
                 guard let text = annotation.text, let start = annotation.points.first else { continue }

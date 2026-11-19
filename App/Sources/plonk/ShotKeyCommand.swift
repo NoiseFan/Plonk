@@ -47,6 +47,8 @@ enum ShotKeyCommand {
             case "6": self = .select(.spotlight)
             case "7": self = .select(.text)
             case "8": self = .select(.step)
+            case "9": self = .select(.mosaic)
+            case "0": self = .select(.redact)
             case "s": self = .action(.scroll)
             case "p": self = .action(.preview)
             case "o": self = .action(.recognizeText)

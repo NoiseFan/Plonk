@@ -7,6 +7,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     var onAction: ((NSImage, AnnotationHistory, QuickShotAction) -> Void)?
 
     private let bitmap: ShotBitmap
+    override var sourceBitmap: ShotBitmap? { bitmap }
     private let backdrop: NSImage
     private let geometry: ShotSelection
     private let safeArea: CGRect
@@ -16,7 +17,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     var scrollPixels: CGSize? { rect?.size }
     private let accent: NSColor
     private lazy var tools = ShotMarkupTools(canvas: self, kinds: [
-        .rectangle, .ellipse, .line, .arrow, .pen, .spotlight, .text, .step
+        .rectangle, .ellipse, .line, .arrow, .pen, .spotlight, .text, .step, .mosaic, .redact
     ],
                                             includeSelection: true, accent: accent)
     private var rect: CGRect? {
