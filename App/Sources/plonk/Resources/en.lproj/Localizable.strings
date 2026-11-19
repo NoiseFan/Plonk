@@ -102,6 +102,8 @@
 "shot.copyFailed" = "Could not copy the screenshot.";
 "shot.openPreview" = "Open in Preview";
 "shot.previewFailed" = "Could not open the screenshot in Preview.";
+"shot.selectRecognizedText" = "Select text, then press ⌘C to copy.";
+"shot.copiedRecognizedText" = "Selected text copied.";
 "shot.recognizing" = "Recognizing text…";
 "shot.recognitionFailed" = "Could not recognize text in the selection.";
 

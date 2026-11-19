@@ -95,6 +95,8 @@
 "shot.copyFailed" = "无法复制截图。";
 "shot.openPreview" = "在预览中打开";
 "shot.previewFailed" = "无法在预览中打开截图。";
+"shot.selectRecognizedText" = "选择文字，再按 ⌘C 复制。";
+"shot.copiedRecognizedText" = "已复制选中的文字。";
 "shot.recognizing" = "正在识别文字…";
 "shot.recognitionFailed" = "无法识别选区内的文字。";
 

@@ -15,6 +15,8 @@ class ShotMarkupCanvas: NSView {
     var strokePoints: Double = 4
 
     private let preview = ShotMarkupPreview(rootView: ShotMarkupLayer())
+    func setMarkupVisible(_ visible: Bool) { preview.isHidden = !visible }
+
     private var textEntry: ShotTextEntry?
     private var textMark: Annotation?
     private var selectedStep: UUID?

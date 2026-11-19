@@ -56,6 +56,12 @@ final class QuickShotWindow: NSWindow {
             }
             return true
         }
+        if canvas.recognizedText != nil,
+           event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty,
+           !event.isARepeat, event.keyCode == kVK_ANSI_O {
+            canvas.dismissRecognition()
+            return true
+        }
         guard let command = ShotKeyCommand(event: event, window: self, canvas: canvas) else { return false }
         switch command {
         case .cancel:

@@ -19,6 +19,7 @@ enum TextExtractor {
         let box: FracRect
         /// Vision's own 0...1 score for the reading it returned.
         let confidence: Double
+        var characterBoxes: [FracRect?] = []
 
         var asDict: [String: Any] {
             [
@@ -58,7 +59,7 @@ enum TextExtractor {
     /// Recognizes text off the main queue and calls back on it. Accurate
     /// recognition of a retina screen takes long enough to be felt, and route
     /// handlers run on the main queue.
-    static func recognize(in image: NSImage, languages: [String] = [],
+    static func recognize(in image: NSImage, languages: [String] = [], includeCharacterBoxes: Bool = false,
                           completion: @escaping (Result<[Line], Error>) -> Void) {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             completion(.failure(Failure.notAnImage))
@@ -69,12 +70,12 @@ enum TextExtractor {
             return
         }
         DispatchQueue.global(qos: .userInitiated).async {
-            let result = Result { try read(cgImage, languages: languages) }
+            let result = Result { try read(cgImage, languages: languages, includeCharacterBoxes: includeCharacterBoxes) }
             DispatchQueue.main.async { completion(result) }
         }
     }
 
-    private static func read(_ cgImage: CGImage, languages: [String]) throws -> [Line] {
+    private static func read(_ cgImage: CGImage, languages: [String], includeCharacterBoxes: Bool) throws -> [Line] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
@@ -89,9 +90,16 @@ enum TextExtractor {
             guard let candidate = observation.topCandidates(1).first else { return nil }
             let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return nil }
-            return Line(text: text,
-                        box: topLeft(observation.boundingBox),
-                        confidence: Double(candidate.confidence))
+            var line = Line(text: text,
+                            box: topLeft(observation.boundingBox),
+                            confidence: Double(candidate.confidence))
+            if includeCharacterBoxes, let range = candidate.string.range(of: text, options: .literal) {
+                line.characterBoxes = candidate.string[range].indices.map { start in
+                    let end = candidate.string.index(after: start)
+                    return (try? candidate.boundingBox(for: start..<end)).map { topLeft($0.boundingBox) }
+                }
+            }
+            return line
         }
     }
 
@@ -115,6 +123,10 @@ enum TextExtractor {
     /// A≉C — and sorting on it scrambles exactly the text it is meant to
     /// straighten out.
     static func joined(_ lines: [Line]) -> String {
+        readingOrder(lines).map(\.text).joined(separator: "\n")
+    }
+
+    static func readingOrder(_ lines: [Line]) -> [Line] {
         let band = 0.01
         var rows: [[Line]] = []
         var anchor = -Double.infinity
@@ -125,10 +137,7 @@ enum TextExtractor {
             }
             rows[rows.count - 1].append(line)
         }
-        return rows
-            .flatMap { $0.sorted { $0.box.x < $1.box.x } }
-            .map(\.text)
-            .joined(separator: "\n")
+        return rows.flatMap { $0.sorted { $0.box.x < $1.box.x } }
     }
 
     static func copyRecognizedText(_ lines: [Line]) -> LocalizedStringResource {

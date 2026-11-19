@@ -11,7 +11,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
     private let backdrop: NSImage
     private let geometry: ShotSelection
     private let safeArea: CGRect
-    private let controls: QuickShotControls
+    let controls: QuickShotControls
     private let fixed: Bool
     var scrollRegion: CGRect? { fixed ? nil : rect.map(geometry.viewRect) }
     var scrollPixels: CGSize? { rect?.size }
@@ -26,8 +26,9 @@ final class QuickShotCanvas: ShotMarkupCanvas {
             refresh()
         }
     }
-    private var recognitionToken = 0
-    private var recognizing = false
+    var recognitionToken = 0
+    var recognizing = false
+    var recognizedText: ShotTextSelectionView?
     private var pointerArea: NSTrackingArea?
     private var ratio: CGFloat?
     private var anchor = CGPoint.zero
@@ -195,6 +196,10 @@ final class QuickShotCanvas: ShotMarkupCanvas {
 
     func perform(_ action: QuickShotAction) {
         guard controls.commitDimensions(), commitText(), let rect else { return }
+        if case .recognizeText = action, recognizedText != nil {
+            dismissRecognition()
+            return
+        }
         if case .scroll = action {
             if !fixed { onStartScroll?() }
             return
@@ -214,35 +219,7 @@ final class QuickShotCanvas: ShotMarkupCanvas {
         tools.select(kind)
     }
 
-    func beginRecognition() -> Int? {
-        guard !recognizing else { return nil }
-        recognizing = true
-        recognitionToken += 1
-        controls.showFeedback(.shotRecognizing)
-        refresh()
-        return recognitionToken
-    }
-
-    func finishRecognition(_ result: Result<[TextExtractor.Line], Error>, token: Int) {
-        guard recognitionToken == token else { return }
-        recognizing = false
-        switch result {
-        case .success(let lines): controls.showFeedback(TextExtractor.copyRecognizedText(lines))
-        case .failure: controls.showFeedback(.shotRecognitionFailed)
-        }
-        refresh()
-    }
-
-    @discardableResult
-    func dismissRecognition() -> Bool {
-        guard !controls.feedback.isHidden else { return false }
-        recognizing = false
-        recognitionToken += 1
-        controls.showFeedback(nil)
-        return true
-    }
-
-    private func refresh() {
+    func refresh() {
         needsDisplay = true
         updateMarkup()
         controls.dimensions.isHidden = fixed || rect == nil
