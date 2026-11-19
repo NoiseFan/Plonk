@@ -1,12 +1,16 @@
 import AppKit
 
 extension QuickShotCanvas {
+    func showCaptureFeedback(_ message: LocalizedStringResource) {
+        controls.showFeedback(message)
+        refresh()
+    }
+
     func beginRecognition() -> Int? {
         guard !recognizing else { return nil }
         recognizing = true
         recognitionToken += 1
-        controls.showFeedback(.shotRecognizing)
-        refresh()
+        showCaptureFeedback(.shotRecognizing)
         return recognitionToken
     }
 

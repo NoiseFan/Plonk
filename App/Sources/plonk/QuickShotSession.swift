@@ -64,10 +64,15 @@ final class QuickShotSession: NSObject {
         guard scrolling == nil, let screen = window.screen, let region = window.canvas.scrollRegion,
               let pixels = window.canvas.scrollPixels,
               let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return }
-        guard pixels.width >= 32, pixels.height >= 32, CGPreflightPostEventAccess() else {
-            HUD.shared.show(.shotScrollUnavailable)
+        guard pixels.width >= 32, pixels.height >= 32 else {
+            window.canvas.showCaptureFeedback(.shotScrollRegionTooSmall)
             return
         }
+        guard CGPreflightPostEventAccess() else {
+            window.canvas.showCaptureFeedback(.shotScrollNeedsAccessibility)
+            return
+        }
+        window.canvas.dismissRecognition()
         windows.filter { $0 !== window }.forEach { $0.orderOut(nil) }
         let bounds = CGRect(origin: .zero, size: window.frame.size)
         let visible = screen.visibleFrame

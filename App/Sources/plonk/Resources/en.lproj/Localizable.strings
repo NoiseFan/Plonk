@@ -91,7 +91,8 @@
 "shot.scrollFull" = "Length limit reached. Press Enter to finish.";
 "shot.scrollFinishing" = "Preparing the long screenshot…";
 "shot.scrollFailed" = "Capture stopped. Press Enter to use any captured content or Esc to return.";
-"shot.scrollUnavailable" = "Scrolling capture needs Accessibility access and a selection of at least 32 × 32 pixels.";
+"shot.scrollRegionTooSmall" = "Select an area at least 32 × 32 pixels.";
+"shot.scrollNeedsAccessibility" = "Grant Plonk Accessibility access to start scrolling capture.";
 "shot.selectionWidth" = "Selection Width";
 "shot.selectionHeight" = "Selection Height";
 "shot.selectionPixels" = "px";
