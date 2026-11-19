@@ -622,6 +622,7 @@
 "tool.arrow" = "Arrow";
 "tool.rectangle" = "Rectangle";
 "tool.ellipse" = "Ellipse";
+"tool.spotlight" = "Spotlight";
 "tool.highlight" = "Highlight";
 "tool.text" = "Text";
 "shotEditor.color %lld" = "Color %lld";

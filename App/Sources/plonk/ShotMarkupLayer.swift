@@ -9,10 +9,7 @@ struct ShotMarkupLayer: View {
         Canvas { context, _ in
             context.clip(to: Path(clip))
             context.translateBy(x: imageRect.minX, y: imageRect.minY)
-            AnnotationRenderer.draw(history.annotations, in: &context, size: imageRect.size)
-            if let live = history.live {
-                AnnotationRenderer.draw([live], in: &context, size: imageRect.size)
-            }
+            AnnotationRenderer.draw(history.annotations, live: history.live, in: &context, size: imageRect.size)
         }
     }
 }

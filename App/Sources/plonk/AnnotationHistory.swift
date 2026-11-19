@@ -22,6 +22,7 @@ struct AnnotationHistory {
     mutating func end() {
         defer { live = nil }
         guard let live, live.points.count > 1 else { return }
+        if live.kind == .spotlight, live.boundingRect(in: CGSize(width: 1, height: 1)).isEmpty { return }
         append(live)
     }
 

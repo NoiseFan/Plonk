@@ -15,7 +15,7 @@ let controls: QuickShotControls
     var scrollRegion: CGRect? { fixed ? nil : rect.map(geometry.viewRect) }
     var scrollPixels: CGSize? { rect?.size }
     private let accent: NSColor
-    private lazy var tools = ShotMarkupTools(canvas: self, kinds: [.rectangle, .ellipse, .arrow, .pen, .text],
+    private lazy var tools = ShotMarkupTools(canvas: self, kinds: [.rectangle, .ellipse, .arrow, .pen, .spotlight, .text],
                                             includeSelection: true, accent: accent)
     private var rect: CGRect? {
         didSet {
