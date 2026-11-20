@@ -6,13 +6,13 @@ final class QuickShotWindow: NSWindow {
     var onScrollKey: ((Bool) -> Void)?
     var onCancel: (() -> Void)?
 
-    init(screen: NSScreen, bitmap: ShotBitmap, accent: NSColor, fixed: Bool = false) {
+    init(screen: NSScreen, bitmap: ShotBitmap, fixed: Bool = false) {
         let frame = screen.frame
         let visible = screen.visibleFrame
         canvas = QuickShotCanvas(bitmap: bitmap, frame: CGRect(origin: .zero, size: frame.size),
                                 safeArea: CGRect(x: visible.minX - frame.minX, y: frame.maxY - visible.maxY,
                                                  width: visible.width, height: visible.height),
-                                accent: accent, fixed: fixed)
+                                fixed: fixed)
         super.init(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         setFrame(frame, display: false)
         level = .screenSaver
@@ -43,6 +43,13 @@ final class QuickShotWindow: NSWindow {
     override var canBecomeKey: Bool { true }
 
     override func cancelOperation(_ sender: Any?) { onCancel?() }
+
+    override func sendEvent(_ event: NSEvent) {
+        // AppKit forwards the first click to the field editor, which places a caret.
+        if event.type == .leftMouseDown, contentView === canvas,
+           canvas.controls.dimensions.selectField(at: event.locationInWindow) { return }
+        super.sendEvent(event)
+    }
 
     func handleShortcut(_ event: NSEvent) -> Bool {
         if let onScrollKey {

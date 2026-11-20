@@ -19,7 +19,8 @@ extension ShotCases {
             }
         } else {
             try selectRegion()
-            try desktop.press("Scrolling Capture (S)")
+            _ = try desktop.wait("selection ready") { desktop.element("Selection Width") }
+            try desktop.key(kVK_ANSI_S)
             _ = try desktop.wait("scroll permission failure feedback") {
                 desktop.element("Grant Plonk Accessibility access to start scrolling capture.")
             }

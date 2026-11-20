@@ -29,6 +29,7 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Changed
 
+- Screenshot Quick Actions use a three-group toolbar with larger controls and a blue size field. Press S for scrolling capture and use the number shortcuts for additional markup tools.
 - Agent command feedback again displays the router's error or queue note.
 - The Simplified Chinese translation now calls window zones “分屏” and the pointer “鼠标”.
 

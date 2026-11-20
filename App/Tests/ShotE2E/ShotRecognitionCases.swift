@@ -4,7 +4,7 @@ import Carbon.HIToolbox
 extension ShotCases {
     func recognitionCase(_ id: String) throws {
         let ready = "Select text, then press ⌘C to copy."
-        try desktop.press("Text")
+        try desktop.press("Recognize and Copy Text")
         if id == "OCR-05" {
             try closePendingRecognition(ready: ready)
             return
@@ -17,7 +17,7 @@ extension ShotCases {
             } catch {
                 throw E2EBlocked("Recognition completed before a second request could be sent during the first one.")
             }
-            try desktop.press("Text")
+            try desktop.press("Recognize and Copy Text")
             _ = try desktop.wait("recognition result", timeout: 15) { desktop.element(ready) }
             try require(desktop.matchingElements(ready) == 1, "Expected exactly one visible recognition result.")
             return

@@ -71,8 +71,7 @@ final class QuickShotSession: NSObject {
     }
 
     private func addWindow(screen: NSScreen, bitmap: ShotBitmap, fixed: Bool) {
-        let window = QuickShotWindow(screen: screen, bitmap: bitmap,
-                                     accent: config().appearance.accent, fixed: fixed)
+        let window = QuickShotWindow(screen: screen, bitmap: bitmap, fixed: fixed)
         window.onCancel = { [weak self] in self?.close() }
         configure(window)
         windows.append(window)
@@ -130,7 +129,7 @@ final class QuickShotSession: NSObject {
                     guard let self, let window, let capture, scrolling === capture else { return }
                     if let image {
                         let canvas = QuickShotCanvas(bitmap: ShotBitmap(image: image), frame: bounds,
-                                                     safeArea: safe, accent: config().appearance.accent, fixed: true)
+                                                     safeArea: safe, fixed: true)
                         scrolling = nil
                         window.onScrollKey = nil
                         window.showCanvas(canvas)

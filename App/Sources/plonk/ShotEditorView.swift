@@ -6,8 +6,7 @@ final class ShotEditorView: NSView {
     private let defaultFolder: () -> String
     private let onFinish: (Bool, String?) -> Void
     private let accent: NSColor
-    private lazy var tools = ShotMarkupTools(canvas: canvas, kinds: Annotation.Kind.allCases,
-                                            includeSelection: false, accent: accent)
+    private lazy var tools = ShotMarkupTools(canvas: canvas, kinds: Annotation.Kind.allCases, accent: accent)
     private let status = NSTextField(labelWithString: "")
     private var colors: [NSButton] = []
 
@@ -40,8 +39,8 @@ final class ShotEditorView: NSView {
         palette.spacing = 3
         for (index, color) in Annotation.palette.enumerated() {
             let button = NSButton()
-            QuickShotControls.configure(button, symbol: "circle.fill", title: .shotEditorColor(index + 1),
-                                        target: self, action: #selector(selectColor))
+            ShotMarkupTools.configure(button, symbol: "circle.fill", title: .shotEditorColor(index + 1),
+                                      target: self, action: #selector(selectColor))
             button.contentTintColor = NSColor(color)
             button.tag = index
             button.wantsLayer = true

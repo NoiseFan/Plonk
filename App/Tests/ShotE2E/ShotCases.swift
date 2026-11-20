@@ -208,7 +208,7 @@ struct ShotCases {
             _ = try desktop.wait("original selection toolbar") { desktop.element("Selection Width") }
         case "SCROLL-06":
             try setDimension("Selection Width", digits: [kVK_ANSI_2, kVK_ANSI_4])
-            try desktop.press("Scrolling Capture (S)")
+            try desktop.key(kVK_ANSI_S)
             _ = try desktop.wait("small selection feedback") {
                 desktop.element("Select an area at least 32 × 32 pixels.")
             }
@@ -219,7 +219,7 @@ struct ShotCases {
             try desktop.key(kVK_Return)
             try desktop.key(kVK_Return)
             _ = try desktop.wait("one result interface") {
-                desktop.element("Scrolling Capture (S)") == nil ? desktop.element("Open Editor") : nil
+                desktop.element("Selection Width") == nil ? desktop.element("Open Editor") : nil
             }
             try require(desktop.hasQuickCaptureWindow() && desktop.matchingElements("Open Editor") == 1,
                         "Expected one fixed capture result after both Enter presses.")
@@ -229,7 +229,7 @@ struct ShotCases {
     }
 
     func startScroll() throws {
-        try desktop.press("Scrolling Capture (S)")
+        try desktop.key(kVK_ANSI_S)
         _ = try desktop.wait("first scrolling frame", timeout: 10) {
             desktop.element("Scroll down in the selection. Enter to finish.")
         }
@@ -248,7 +248,6 @@ struct ShotCases {
     func setDimension(_ label: String, digits: [Int]) throws {
         let field = try desktop.wait(label) { desktop.element(label) }
         try desktop.click(desktop.center(of: field))
-        try desktop.key(kVK_ANSI_A, flags: .maskCommand)
         for digit in digits { try desktop.key(digit) }
         try desktop.key(kVK_Return)
     }

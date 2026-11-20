@@ -5,14 +5,6 @@ extension ShotCases {
         guard #available(macOS 14.0, *), CGPreflightScreenCaptureAccess() else {
             throw E2EBlocked("The test driver needs macOS 14 and Screen Recording access to inspect the selection accent.")
         }
-        let config = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Plonk/config.json")
-        guard let bytes = try? Data(contentsOf: config),
-              let settings = (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any],
-              let appearance = settings["appearance"] as? [String: Any],
-              (appearance["accentHex"] as? String)?.uppercased() == "#0077F6" else {
-            throw E2EBlocked("Set the test session's Plonk appearance to the blue accent before running UI-02.")
-        }
         let baseline = desktop.windowCount()
         defer { desktop.dismissCapture(above: baseline) }
         try selectRegion()
@@ -20,7 +12,7 @@ extension ShotCases {
         let image = try captureFixtureRegion()
         let pixels = try [3, 5, 7, 9].map { try sample(image, at: CGPoint(x: $0, y: 1)) }
         let blue = pixels.filter { $0[0] < 30 && (85...155).contains($0[1]) && $0[2] > 205 }
-        try require(blue.count >= 2, "Selection corner did not use the configured blue.")
+        try require(blue.count >= 2, "Selection corner did not use the Quick Actions blue.")
     }
 
     func blueSwatchIsFirst() throws {

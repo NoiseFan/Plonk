@@ -64,7 +64,7 @@
 "shot.captureRegion" = "区域截图";
 "shot.captureWindow" = "窗口截图";
 "shot.captureScreen" = "全屏截图";
-"shot.captureHelp" = "框选区域后，可以直接复制或保存截图，也可以选择打开编辑器。首次截图时，macOS 会请求屏幕录制权限。";
+"shot.captureHelp" = "框选区域后，可以直接复制或保存截图，也可以选择打开编辑器。框选后按 S 开始滚动截图。首次截图时，macOS 会请求屏幕录制权限。";
 "shot.pinPart" = "置顶屏幕区域";
 "shot.pinPartHelp" = "拖出一块区域，将它置顶显示。实时模式会同步原区域的内容，可以在工作时查看构建日志、图表或通话。静态模式保留选取时的画面，无需持续捕捉，也适用于实时模式无法跟随的窗口。关闭面板即可结束。";
 "shot.language" = "语言";
@@ -77,7 +77,6 @@
 "shot.afterCapture" = "截图后";
 "shot.afterQuickActions" = "快捷操作";
 "shot.afterEditor" = "打开编辑器";
-"shot.scroll" = "滚动截图（S）";
 "shot.scrollStarting" = "正在准备滚动截图…";
 "shot.scrollReady" = "在选区内向下滚动，按 Enter 完成。";
 "shot.scrollPaused" = "拼接已暂停。请向上滚回，或按 Enter 完成。";
@@ -95,6 +94,7 @@
 "shot.captureFailed" = "无法截取屏幕，请检查屏幕录制权限。";
 "shot.copyFailed" = "无法复制截图。";
 "shot.openPreview" = "在预览中打开";
+"shot.recognizeAndCopyText" = "识别并复制文字";
 "shot.previewFailed" = "无法在预览中打开截图。";
 "shot.selectRecognizedText" = "选择文字，再按 ⌘C 复制。";
 "shot.copiedRecognizedText" = "已复制选中的文字。";

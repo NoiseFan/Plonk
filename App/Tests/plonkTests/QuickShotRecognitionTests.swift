@@ -38,6 +38,6 @@ struct QuickShotRecognitionTests {
         let image = NSImage(bitmap: try #require(context.makeImage()))
         let bitmap = try #require(ShotBitmap(image))
         let frame = CGRect(origin: .zero, size: bitmap.size)
-        return QuickShotCanvas(bitmap: bitmap, frame: frame, safeArea: frame, accent: .systemBlue)
+        return QuickShotCanvas(bitmap: bitmap, frame: frame, safeArea: frame)
     }
 }

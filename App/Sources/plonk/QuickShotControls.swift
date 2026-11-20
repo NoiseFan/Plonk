@@ -1,120 +1,43 @@
 import AppKit
 
-final class QuickShotControls: NSObject, NSTextFieldDelegate {
-    let dimensions = QuickShotSurface(radius: 9, insets: NSEdgeInsets(top: 3, left: 7, bottom: 3, right: 9))
-    let toolbar = QuickShotSurface(radius: 16, insets: NSEdgeInsets(top: 4, left: 7, bottom: 4, right: 7))
+final class QuickShotControls {
+    let dimensions = QuickShotDimensions()
+    let toolbar: QuickShotToolbar
     let feedback = QuickShotSurface(radius: 9, insets: NSEdgeInsets(top: 6, left: 10, bottom: 6, right: 10))
-    var onResize: ((Int, Bool) -> Void)?
-    var onLock: ((Bool) -> Void)?
-    var onCancel: (() -> Void)?
-    var onAction: ((QuickShotAction) -> Void)?
-    var onEndEditing: (() -> Void)?
-
-    private let widthField = NSTextField()
-    private let heightField = NSTextField()
-    private let lock = NSButton()
     private let message = NSTextField(labelWithString: "")
-    private var width = 0
-    private var height = 0
 
-    init(fixed: Bool) {
-        super.init()
-        setup(widthField, title: .shotSelectionWidth)
-        setup(heightField, title: .shotSelectionHeight)
-        let pixels = NSTextField(labelWithString: String(localized: .shotSelectionPixels))
-        pixels.font = .systemFont(ofSize: 11, weight: .medium)
-        pixels.textColor = .secondaryLabelColor
-        Self.configure(lock, symbol: "lock.open", title: .shotSelectionLock, target: self, action: #selector(toggleLock))
-        lock.setButtonType(.toggle)
-        for view in [widthField, lock, heightField, pixels] { dimensions.stack.addArrangedSubview(view) }
+    init(canvas: QuickShotCanvas) {
+        toolbar = QuickShotToolbar(canvas: canvas)
         feedback.isHidden = true
         message.lineBreakMode = .byTruncatingTail
         message.widthAnchor.constraint(lessThanOrEqualToConstant: 320).isActive = true
         feedback.stack.addArrangedSubview(message)
-        addButton(symbol: "xmark", title: .commonCancel, action: #selector(cancel))
-        if !fixed {
-            addButton(symbol: "arrow.up.and.down", title: .shotScroll, action: #selector(scrollCapture))
-        }
-        addButton(symbol: "photo", title: .shotOpenPreview, action: #selector(openPreview))
-        addButton(symbol: "text.viewfinder", title: .shotText, action: #selector(recognizeText))
-        addButton(symbol: "macwindow", title: .shotAfterEditor, action: #selector(openEditor))
-        addButton(symbol: "square.and.arrow.down", title: .shotEditorSaveToFolder, action: #selector(save))
-        addButton(symbol: "folder", title: .shotEditorSaveAs, action: #selector(saveAs))
-        addButton(symbol: "document.on.document", title: .shotEditorCopy, action: #selector(copyImage))
+        for view in [dimensions, toolbar, feedback] { canvas.addSubview(view) }
+        dimensions.onResize = { [weak canvas] value, horizontal in canvas?.resize(value, horizontal: horizontal) }
+        dimensions.onLock = { [weak canvas] locked in canvas?.lockAspectRatio(locked) }
+        dimensions.onEndEditing = { [weak canvas] in canvas?.window?.makeFirstResponder(canvas) }
     }
 
-    private func setup(_ field: NSTextField, title: LocalizedStringResource) {
-        field.isEditable = true
-        field.isSelectable = true
-        field.isBordered = false
-        field.drawsBackground = false
-        field.focusRingType = .exterior
-        field.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
-        field.alignment = .center
-        field.setAccessibilityLabel(String(localized: title))
-        field.toolTip = String(localized: title)
-        field.delegate = self
-        field.widthAnchor.constraint(equalToConstant: 42).isActive = true
+    func contains(_ point: CGPoint) -> Bool {
+        [dimensions, toolbar, feedback].contains { !$0.isHidden && $0.frame.contains(point) }
     }
 
-    static func configure(_ button: NSButton, symbol: String, title: LocalizedStringResource,
-                          target: AnyObject, action: Selector) {
-        let label = String(localized: title)
-        button.image = icon(symbol, label: label)
-        button.imagePosition = .imageOnly
-        button.bezelStyle = .regularSquare
-        button.controlSize = .small
-        button.isBordered = false
-        button.toolTip = label
-        button.setAccessibilityLabel(label)
-        button.target = target
-        button.action = action
-        button.widthAnchor.constraint(equalToConstant: 24).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 24).isActive = true
-    }
-
-    static func icon(_ symbol: String, label: String) -> NSImage? {
-        NSImage(systemSymbolName: symbol, accessibilityDescription: label)?
-            .withSymbolConfiguration(.init(pointSize: 15, weight: .medium))
-    }
-
-    @discardableResult
-    func addButton(symbol: String, title: LocalizedStringResource, action: Selector) -> NSButton {
-        let button = NSButton()
-        Self.configure(button, symbol: symbol, title: title, target: self, action: action)
-        toolbar.stack.addArrangedSubview(button)
-        return button
-    }
-
-    func update(width: Int, height: Int) {
-        self.width = width
-        self.height = height
-        widthField.stringValue = String(width)
-        heightField.stringValue = String(height)
-    }
-
-    func place(around rect: CGRect, in area: CGRect) {
-        let top = dimensions.stack.fittingSize
-        let bottom = toolbar.stack.fittingSize
-        let gap: CGFloat = 7
-        let topY = max(area.minY + gap, rect.minY - top.height - gap)
-        var bottomY = rect.maxY + gap
-        if bottomY + bottom.height > area.maxY - gap {
-            let above = topY - bottom.height - gap
-            bottomY = above >= area.minY + gap ? above : rect.maxY - bottom.height - gap
-        }
-        if bottomY >= topY - bottom.height && bottomY < topY + top.height + gap {
-            bottomY = topY + top.height + gap
-        }
-        dimensions.frame = CGRect(x: horizontalOrigin(rect.minX, width: top.width, in: area),
-                                  y: topY, width: top.width, height: top.height)
-        toolbar.frame = CGRect(x: horizontalOrigin(rect.minX, width: bottom.width, in: area),
-                               y: min(bottomY, area.maxY - bottom.height - gap),
-                               width: bottom.width, height: bottom.height)
+    func place(around rect: CGRect, in area: CGRect, viewportWidth: CGFloat) {
+        let compact = viewportWidth <= 620
+        let availableWidth = area.width - 10
+        let width = compact && !dimensions.isHidden
+            ? min(availableWidth, max(220, rect.width)) : availableWidth
+        let size = toolbar.sizeToFit(availableWidth: width, compact: compact)
+        let frames = QuickShotLayout.place(dimensions: dimensions.isHidden ? nil : dimensions.frame.size,
+                                          toolbar: size, selection: rect, area: area)
+        dimensions.setFrameOrigin(frames.dimensions.origin)
+        toolbar.frame = frames.toolbar
         if !feedback.isHidden {
             let size = feedback.stack.fittingSize
+            let gap: CGFloat = 7
             var frame = CGRect(origin: CGPoint(x: area.maxX - size.width - gap, y: area.minY + gap), size: size)
-            if frame.intersects(dimensions.frame) { frame.origin.y = dimensions.frame.maxY + gap }
+            if frame.intersects(frames.dimensions) { frame.origin.y = frames.dimensions.maxY + gap }
+            if frame.intersects(frames.toolbar) { frame.origin.y = frames.toolbar.maxY + gap }
             feedback.frame = frame
         }
     }
@@ -122,82 +45,5 @@ final class QuickShotControls: NSObject, NSTextFieldDelegate {
     func showFeedback(_ text: LocalizedStringResource?) {
         message.stringValue = text.map { String(localized: $0) } ?? ""
         feedback.isHidden = text == nil
-    }
-
-    private func horizontalOrigin(_ x: CGFloat, width: CGFloat, in area: CGRect) -> CGFloat {
-        min(max(x, area.minX + 5), max(area.minX + 5, area.maxX - width - 5))
-    }
-
-    func resetLock() {
-        lock.state = .off
-        updateLock()
-    }
-
-    private func updateLock() {
-        lock.image = Self.icon(lock.state == .on ? "lock" : "lock.open",
-                               label: String(localized: .shotSelectionLock))
-    }
-
-    @objc private func toggleLock() {
-        updateLock()
-        onLock?(lock.state == .on)
-    }
-
-    @objc private func scrollCapture() { onAction?(.scroll) }
-    @objc private func openEditor() { onAction?(.editor) }
-    @objc private func openPreview() { onAction?(.preview) }
-    @objc private func recognizeText() { onAction?(.recognizeText) }
-    @objc private func save() { onAction?(.save()) }
-    @objc private func saveAs() { onAction?(.saveAs) }
-    @objc private func copyImage() { onAction?(.copy) }
-    @objc private func cancel() { onCancel?() }
-
-    @discardableResult
-    func commitDimensions() -> Bool {
-        for field in [widthField, heightField] {
-            if let editor = field.currentEditor() as? NSTextView {
-                return commit(field, textView: editor)
-            }
-        }
-        return true
-    }
-
-    private func commit(_ control: NSControl, textView: NSTextView) -> Bool {
-        guard !textView.hasMarkedText() else { return false }
-        guard let value = Int(textView.string.trimmingCharacters(in: .whitespaces)), value > 0 else {
-            HUD.shared.show(.shotSelectionInvalid)
-            return false
-        }
-        onEndEditing?()
-        onResize?(value, control === widthField)
-        return true
-    }
-
-    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        guard !textView.hasMarkedText() else { return false }
-        switch commandSelector {
-        case #selector(NSResponder.insertNewline(_:)):
-            _ = commit(control, textView: textView)
-            return true
-        case #selector(NSResponder.insertTab(_:)), #selector(NSResponder.insertBacktab(_:)):
-            guard commit(control, textView: textView) else { return true }
-            if commandSelector == #selector(NSResponder.insertBacktab(_:)) {
-                control.window?.selectPreviousKeyView(control)
-            } else {
-                control.window?.selectNextKeyView(control)
-            }
-            return true
-        case #selector(NSResponder.cancelOperation(_:)):
-            onEndEditing?()
-            return true
-        default: return false
-        }
-    }
-
-    func controlTextDidEndEditing(_ obj: Notification) {
-        guard let field = obj.object as? NSTextField else { return }
-        let value = Int(field.stringValue.trimmingCharacters(in: .whitespaces))
-        if let value, value > 0 { onResize?(value, field === widthField) }
-        else { update(width: width, height: height) }
     }
 }

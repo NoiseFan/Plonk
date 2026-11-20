@@ -50,17 +50,17 @@ extension ShotCases {
             return
         }
         let tools = [
-            "FOCUS-01-line": (kVK_ANSI_3, "Line"),
-            "FOCUS-01-spotlight": (kVK_ANSI_6, "Spotlight"),
-            "FOCUS-01-step": (kVK_ANSI_8, "Step Number"),
-            "FOCUS-01-mosaic": (kVK_ANSI_9, "Mosaic"),
-            "FOCUS-01-redact": (kVK_ANSI_0, "Opaque Redaction"),
+            "FOCUS-01-line": kVK_ANSI_3,
+            "FOCUS-01-spotlight": kVK_ANSI_6,
+            "FOCUS-01-step": kVK_ANSI_8,
+            "FOCUS-01-mosaic": kVK_ANSI_9,
+            "FOCUS-01-redact": kVK_ANSI_0,
         ]
-        if let (key, label) = tools[id] {
+        if let key = tools[id] {
             try desktop.key(key)
-            _ = try desktop.wait("\(label) to be selected") {
-                guard let button = desktop.element(label),
-                      desktop.attribute(button, kAXValueAttribute) as? NSNumber == 1 else { return nil as Bool? }
+            _ = try desktop.wait("canvas to switch from move to markup") {
+                guard let button = desktop.element("Move or Resize Selection"),
+                      desktop.attribute(button, kAXValueAttribute) as? NSNumber == 0 else { return nil as Bool? }
                 return true
             }
             return
