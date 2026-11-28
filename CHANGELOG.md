@@ -6,21 +6,41 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Added
 
+- **Find the exact pixels to capture in a region screenshot.** In Quick Actions,
+  the magnifier follows the pointer before and during a selection. Press
+  `+` or `=` to zoom in and `-` to zoom out. The magnifier changes sides
+  near screen edges and avoids the selection when space allows.
+- **Pick a color from the screen.** While the magnifier is visible, press
+  `C` to copy the sampled sRGB color as plain text, such as `#212830`, and
+  end the capture. A notice shows the copied value. You can do this while dragging a selection, but not once
+  something is marked, so a color copy never discards annotations.
 - **Set a default width and color for each screenshot annotation tool.** Use
   the Quick Actions dial or the editor slider to adjust width for the current
   screenshot. Opening the editor from Quick Actions keeps the selected tool
   and each tool's temporary width and color. New captures use Screenshot settings.
   Widths are in screen points, so a stroke looks the same on Retina and
   standard displays.
-- **Quick Actions for window and full-screen screenshots.** Annotate, copy, or
-  save the capture at its original pixel size. Full-screen capture starts with
-  an adjustable selection on the display under the pointer.
-- **Restore the last screenshot region.** Press R while choosing a region to
-  reuse the last copied, saved, or opened selection on its original display
-  with the current screenshot. Press F or click the desktop to select a full screen.
+- **Quick Actions for window and full-screen screenshots.** Pick a window in
+  the macOS picker or start with the entire display under the pointer as an
+  adjustable selection. Annotate, copy or save the result at its original pixel size.
+  Without Screen Recording, a region or full-screen capture asks macOS for it
+  and says the capture failed.
 - **Region screenshots keep the selection on screen.** Choose Open Editor to
   continue editing, or change After capture in Screenshot settings to open
   the editor immediately.
+- **Quick Actions stay outside the selection when there is space.** The
+  toolbar follows the region at a fixed distance below it or along an open
+  side. For a full display, it appears at the bottom center.
+- **Select a full display from the region picker.** Click the exposed desktop
+  or press F to select the whole display under the pointer, replacing any
+  selection, as long as nothing is marked yet. A hint at the lower left lists
+  the `F` and `C` shortcuts while you choose. Drag to draw a region and keep the other
+  displays available for a replacement selection. Dragging inside a
+  full-display selection draws a new region.
+- **Restore the last screenshot region.** Press R while choosing a region to
+  reuse the last copied, saved or opened selection on the display it came from,
+  cut from the new screenshot. It is offered only while that display keeps the
+  same resolution and scaling, and the hint lists R on that display.
 - **Adjust the region before opening the editor.** Drag inside the blue
   outline to move it, drag an edge or corner, or enter exact pixel dimensions.
   The width and height fields fit four digits while editing. Click the padlock

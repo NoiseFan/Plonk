@@ -1,7 +1,7 @@
 import AppKit
 
 final class QuickShotToolbar: NSView {
-    enum Action {
+    enum Action: Equatable {
         case tool(Annotation.Kind?)
         case undo
         case redo

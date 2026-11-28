@@ -24,6 +24,7 @@ extension LocalizedStringResource {
     static let shotCaptureFailed = Self.key("shot.captureFailed")
     static let shotCopyFailed = Self.key("shot.copyFailed")
     static let shotSelectDisplayHint = Self.key("shot.selectDisplayHint")
+    static let shotCopyColorHint = Self.key("shot.copyColorHint")
     static let shotRestoreRegionHint = Self.key("shot.restoreRegionHint")
     static let shotSelectionMove = Self.key("shot.selectionMove")
     static let shotSelectionWidth = Self.key("shot.selectionWidth")

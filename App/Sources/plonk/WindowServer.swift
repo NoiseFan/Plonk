@@ -1,6 +1,6 @@
 import AppKit
 
-// One reader of the window server's list, for the two things that ask it:
+// One reader of the window server's list for the modules that ask it:
 // which windows can be photographed, and which are on screen right now. The
 // list is what the window server draws, so it knows what Accessibility does
 // not: whether a window is on the current Space and not hidden. Asking it is

@@ -3,7 +3,7 @@ import Combine
 
 final class QuickShotCanvas: NSView {
     private enum Gesture {
-        case create(from: CGPoint, desktopClick: Bool)
+        case create(ShotRegionGesture)
         case adjust(from: CGPoint, original: CGRect, handle: CGPoint)
         case mark
     }
@@ -14,7 +14,6 @@ final class QuickShotCanvas: NSView {
     private let fixed: Bool
     private let backdrop: QuickShotBackdrop
     private let markup: QuickShotMarkupView
-    private var selectionHint: QuickShotHint?
     private var history = AnnotationHistory()
     private var selection: CGRect?
     private var aspectRatio: CGFloat?
@@ -24,10 +23,10 @@ final class QuickShotCanvas: NSView {
     private var accentObservation: AnyCancellable?
     var onCancel: (() -> Void)?
     var onSelect: (() -> Void)?
-    var onSelectionStateChange: (() -> Void)?
-    var isDesktop: ((CGPoint) -> Bool)?
-    var onSelectDisplay: (() -> Void)?
     var marksAnywhere: (() -> Bool)?
+    var onSelectDisplay: (() -> Void)?
+    var onDragStateChange: (() -> Void)?
+    var startsOnWindow: ((CGPoint) -> Bool)?
     var onOutput: ((QuickShotOutput, ShotCrop) -> Void)?
 
     init(bitmap: ShotBitmap, size: CGSize, safeArea: CGRect, fixed: Bool, model: AppModel = AppModel(),
@@ -69,9 +68,8 @@ final class QuickShotCanvas: NSView {
             refresh()
         }
         dimensions.onSizeChange = { [weak self] in
-            guard let self, let selection else { return }
-            controls.place(over: geometry.viewRect(selection), annotation: self.annotation,
-                           toolbarSize: controls.toolbar.frame.size)
+            guard let self, let selection, !controls.dimensions.isHidden else { return }
+            controls.place(over: geometry.viewRect(selection), annotation: self.annotation)
         }
         refresh()
     }
@@ -82,18 +80,30 @@ final class QuickShotCanvas: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     var hasMarks: Bool { history.canUndo || history.canRedo }
-    var isWaitingForSelection: Bool { !fixed && selection == nil && gesture == nil }
-
-    private var geometry: ShotSelection { ShotSelection(pixels: bitmap.size, view: bounds.size) }
-
-    func installSelectionHint(canRestore: Bool) {
-        let hint = QuickShotHint(in: safeArea, canRestore: canRestore)
-        selectionHint = hint
-        addSubview(hint)
+    /// A region being drawn or resized, which only the canvas it started on samples.
+    var isDraggingRegionBoundary: Bool {
+        if case .adjust(_, _, let handle) = gesture { return handle != .zero }
+        if case .create = gesture { return true } else { return false }
     }
 
-    func showSelectionHint(_ visible: Bool) {
-        selectionHint?.isHidden = !visible
+    private var geometry: ShotSelection { ShotSelection(pixels: bitmap.size, view: bounds.size) }
+    private var entireDisplay: CGRect { CGRect(origin: .zero, size: bitmap.size) }
+
+    private var drawingRegion: ShotRegionGesture? {
+        guard case .create(let region) = gesture, region.isDragging else { return nil }
+        return region
+    }
+
+    var hasSelection: Bool { selection != nil }
+    var isTrackingPointer: Bool { gesture != nil }
+    var isWaitingForSelection: Bool { !fixed && !hasSelection && drawingRegion == nil }
+
+    var hint: QuickShotTips? { controls.hint }
+
+    /// The region on screen in view points: the one being drawn, else the selection.
+    var regionFrame: CGRect? {
+        let region = if let draft = drawingRegion { geometry.selection(from: draft.start, to: draft.end) } else { selection }
+        return region.map(geometry.viewRect)
     }
 
     override func updateTrackingAreas() {
@@ -110,30 +120,19 @@ final class QuickShotCanvas: NSView {
     override func mouseMoved(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
         guard !controls.contains(point) else { return }
-        if fixed {
-            (annotation.tool != nil && backdrop.frame.contains(point) ? NSCursor.crosshair : .arrow).set()
-            return
-        }
-        guard let selection else { return NSCursor.crosshair.set() }
-        let handle = geometry.handle(at: point, of: selection)
-        if handle != .zero {
-            resizeCursor(for: handle).set()
-        } else {
-            let moving = annotation.tool == nil && geometry.viewRect(selection).contains(point)
-            (moving ? NSCursor.openHand : .crosshair).set()
+        if fixed { return (annotation.tool != nil && backdrop.frame.contains(point) ? NSCursor.crosshair : .arrow).set() }
+        switch press(at: point) {
+        case .adjust(let handle) where handle != .zero: QuickShotResizeCursor.forHandle(handle).set()
+        case .adjust: NSCursor.openHand.set()
+        default: NSCursor.crosshair.set()
         }
     }
 
-    private func resizeCursor(for handle: CGPoint) -> NSCursor {
-        if #available(macOS 15, *) {
-            if handle.x == 0 { return .rowResize(directions: .all) }
-            if handle.y == 0 { return .columnResize(directions: .all) }
-            let corner: NSCursor.FrameResizePosition = handle.y < 0
-                ? (handle.x < 0 ? .topLeft : .topRight)
-                : (handle.x < 0 ? .bottomLeft : .bottomRight)
-            return .frameResize(position: corner, directions: .all)
-        }
-        return handle.x == 0 ? .resizeUpDown : .resizeLeftRight
+    private func press(at point: CGPoint) -> QuickShotPress {
+        let handle = selection.map { geometry.handle(at: point, of: $0) } ?? .zero
+        let inside = selection.map { geometry.viewRect($0).contains(point) } ?? false
+        return QuickShotPress(handle: handle, insideSelection: inside, coversDisplay: selection == entireDisplay,
+                              drawing: annotation.tool != nil, marksExist: marksAnywhere?() ?? hasMarks)
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -147,10 +146,7 @@ final class QuickShotCanvas: NSView {
             if backdrop.frame.contains(point) { beginMark(at: point) }
             return
         }
-        let handle = selection.map { geometry.handle(at: point, of: $0) } ?? .zero
-        let inside = selection.map { geometry.viewRect($0).contains(point) } ?? false
-        let marksExist = marksAnywhere?() ?? hasMarks
-        switch QuickShotPress(handle: handle, insideSelection: inside, drawing: annotation.tool != nil, marksExist: marksExist) {
+        switch press(at: point) {
         case .mark:
             beginMark(at: point)
         case .adjust(let handle):
@@ -158,10 +154,7 @@ final class QuickShotCanvas: NSView {
             gesture = .adjust(from: geometry.pixelPoint(point), original: selection, handle: handle)
             if handle == .zero { NSCursor.closedHand.set() }
         case .select:
-            let desktopClick = isWaitingForSelection && isDesktop?(point) == true
-            clearSelection()
-            gesture = .create(from: point, desktopClick: desktopClick)
-            onSelect?()
+            gesture = .create(ShotRegionGesture(start: point, startsOnWindow: startsOnWindow?(point) == true))
         case .ignore:
             return
         }
@@ -176,9 +169,12 @@ final class QuickShotCanvas: NSView {
     override func mouseDragged(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
         switch gesture {
-        case .create(let start, let desktopClick):
-            gesture = .create(from: start, desktopClick: desktopClick && point == start)
-            selection = geometry.selection(from: start, to: point)
+        case .create(var region):
+            let wasDragging = region.isDragging
+            region.update(to: point)
+            gesture = .create(region)
+            if region.isDragging != wasDragging { onDragStateChange?() }
+            guard region.isDragging else { return }
         case .adjust(let start, let original, let handle):
             let current = geometry.pixelPoint(point)
             let delta = CGPoint(x: current.x - start.x, y: current.y - start.y)
@@ -194,52 +190,63 @@ final class QuickShotCanvas: NSView {
 
     override func mouseUp(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        if case .mark = gesture {
-            history.end(at: ImageFit.unitPoint(point, in: backdrop.frame))
-        } else if case .create(let start, true) = gesture, point == start {
+        switch gesture {
+        case .create(var region):
+            region.update(to: point)
             gesture = nil
-            onSelectDisplay?()
-        } else {
+            if region.isDragging {
+                if let rect = geometry.selection(from: region.start, to: region.end) {
+                    confirmSelection(rect)
+                } else {
+                    onDragStateChange?()
+                }
+            } else if !region.startsOnWindow {
+                // Only a click on exposed desktop selects the display; one on a window does nothing.
+                onSelectDisplay?()
+            }
+        case .mark:
+            history.end(at: ImageFit.unitPoint(point, in: backdrop.frame))
+        case .adjust:
             mouseDragged(with: event)
+        case nil:
+            return
         }
         gesture = nil
-        onSelectionStateChange?()
         refresh()
         mouseMoved(with: event)
     }
 
     func handle(_ command: ShotKeyCommand) {
-        switch command {
-        case .cancel: perform(.cancel)
-        case .copy: perform(.output(.copy))
-        case .save: perform(.output(.save))
-        case .undo: perform(.undo)
-        case .redo: perform(.redo)
-        case .selectDisplay, .restoreRegion: break
-        }
+        if command == .selectDisplay { onSelectDisplay?(); return }
+        if let action = command.toolbarAction { perform(action) }
     }
 
-    @discardableResult
-    func selectRegion(_ rect: CGRect) -> Bool {
-        guard isWaitingForSelection else { return false }
+    /// Replaces selection and marks with `rect` in pixels, or the whole display.
+    func select(_ rect: CGRect? = nil) {
+        let rect = rect ?? entireDisplay
+        guard !fixed, selection != rect else { return }
+        confirmSelection(rect)
+        refresh()
+    }
+
+    private func confirmSelection(_ rect: CGRect) {
+        resetSelectionEditing()
         selection = rect
         onSelect?()
-        refresh()
-        return true
-    }
-
-    func selectEntireDisplay() {
-        selectRegion(CGRect(origin: .zero, size: bitmap.size))
     }
 
     func clearSelection() {
-        guard !fixed else { return }
+        guard !fixed, selection != nil else { return }
         gesture = nil
         selection = nil
+        resetSelectionEditing()
+        refresh()
+    }
+
+    private func resetSelectionEditing() {
         aspectRatio = nil
         history = AnnotationHistory()
         annotation.tool = nil
-        refresh()
     }
 
     func selectDimension(at point: CGPoint) -> Bool {
@@ -260,12 +267,12 @@ final class QuickShotCanvas: NSView {
             return
         }
 
-        let frame = selection.map(geometry.viewRect)
+        let draft = drawingRegion
+        let frame = regionFrame
         backdrop.selection = frame
-        markup.show(history, clippedTo: frame)
-        let isCreating = if case .create = gesture { true } else { false }
-        controls.showRegion(hasSelection: selection != nil, isCreating: isCreating)
-        guard let selection, let frame else { return }
+        markup.show(history, clippedTo: draft == nil ? frame : nil)
+        controls.showRegion(selection != nil && draft == nil)
+        guard draft == nil, let selection, let frame else { return }
         controls.dimensions.update(size: selection.size, locked: aspectRatio != nil)
         controls.place(over: frame, annotation: annotation)
     }

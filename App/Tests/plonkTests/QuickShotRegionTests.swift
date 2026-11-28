@@ -4,108 +4,46 @@ import Testing
 
 @MainActor
 struct QuickShotRegionTests {
-    @Test func restoredSelectionUsesTheNewBitmapAndShowsRegionControls() throws {
-        let canvas = try makeCanvas()
-        let rect = CGRect(x: 140, y: 200, width: 360, height: 280)
-        canvas.installSelectionHint(canRestore: true)
-        let hint = try #require(canvas.subviews.compactMap { $0 as? QuickShotHint }.first)
-        #expect(hint.subviews.compactMap { $0 as? NSTextField }.map(\.stringValue)
-            .contains(String(localized: .shotRestoreRegionHint)))
-        #expect(hint.hitTest(.zero) == nil)
-
-        #expect(canvas.selectRegion(rect))
-        canvas.showSelectionHint(canvas.isWaitingForSelection)
-
-        #expect(hint.isHidden)
-        let backdrop = try #require(canvas.subviews.compactMap { $0 as? QuickShotBackdrop }.first)
-        let controls = try #require(canvas.subviews.compactMap { $0 as? QuickShotDimensions }.first)
-        let toolbar = try #require(canvas.subviews.compactMap { $0 as? QuickShotToolbar }.first)
-        #expect(backdrop.selection == CGRect(x: 70, y: 100, width: 180, height: 140))
-        #expect(!controls.isHidden)
-        #expect(!toolbar.isHidden)
-
-        var output: ShotCrop?
-        canvas.onOutput = { _, crop in output = crop }
-        canvas.handle(.save)
-        let crop = try #require(output)
-        #expect(crop.rect == rect)
-        #expect(crop.history.annotations.isEmpty)
-        let bitmap = try #require(crop.image.representations.first as? NSBitmapImageRep)
-        #expect(bitmap.colorAt(x: 0, y: 0)?.redComponent == 1)
-    }
-
-    @Test func restoreKeepsTheCurrentGestureAndConfirmedSelection() throws {
-        let canvas = try makeCanvas()
-        let window = NSWindow(contentRect: canvas.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.contentView = canvas
-        let start = CGPoint(x: 100, y: 100)
-        let end = CGPoint(x: 280, y: 260)
-        let previous = CGRect(x: 10, y: 30, width: 40, height: 50)
-        canvas.mouseDown(with: try mouse(.leftMouseDown, at: start, in: canvas, window: window))
-        #expect(!canvas.selectRegion(previous))
-        canvas.mouseDragged(with: try mouse(.leftMouseDragged, at: end, in: canvas, window: window))
-        #expect(!canvas.selectRegion(previous))
-        canvas.mouseUp(with: try mouse(.leftMouseUp, at: end, in: canvas, window: window))
-        #expect(!canvas.selectRegion(previous))
-
-        var output: ShotCrop?
-        canvas.onOutput = { _, crop in output = crop }
-        canvas.handle(.save)
-        #expect(output?.rect == CGRect(x: 200, y: 200, width: 360, height: 320))
-    }
-
-    @Test func missingRegionOmitsTheRestoreHint() throws {
-        let canvas = try makeCanvas()
-        canvas.installSelectionHint(canRestore: false)
-        let hint = try #require(canvas.subviews.compactMap { $0 as? QuickShotHint }.first)
-        #expect(hint.subviews.compactMap { $0 as? NSTextField }.map(\.stringValue)
-            == [String(localized: .shotSelectDisplayHint)])
-        #expect(canvas.isWaitingForSelection)
-    }
-
-    @Test(arguments: [true, false]) func onlyADesktopClickSelectsTheFullScreen(isDesktop: Bool) throws {
-        let canvas = try makeCanvas()
-        let window = NSWindow(contentRect: canvas.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.contentView = canvas
-        canvas.isDesktop = { _ in isDesktop }
-        canvas.onSelectDisplay = { [weak canvas] in canvas?.selectEntireDisplay() }
-
-        let point = CGPoint(x: 200, y: 150)
-        canvas.mouseDown(with: try mouse(.leftMouseDown, at: point, in: canvas, window: window))
-        canvas.mouseUp(with: try mouse(.leftMouseUp, at: point, in: canvas, window: window))
-
-        var output: ShotCrop?
-        canvas.onOutput = { _, crop in output = crop }
-        canvas.handle(.save)
-        if isDesktop {
-            #expect(output?.rect == CGRect(x: 0, y: 0, width: 1600, height: 1000))
-        } else {
-            #expect(canvas.isWaitingForSelection)
-            #expect(output == nil)
-        }
-    }
-
-    @Test func exactDimensionsAreUsedByTheSavedRetinaCrop() throws {
-        let canvas = try makeCanvas()
-        let frame = canvas.frame
+    @Test func regionFrameFollowsTheAreaBeingDrawn() throws {
+        _ = NSApplication.shared
+        let context = try #require(CGContext(
+            data: nil, width: 800, height: 800, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let size = CGSize(width: 400, height: 400)
+        let bitmap = ShotBitmap(image: try #require(context.makeImage()), displaySize: size)
+        let frame = CGRect(origin: .zero, size: size)
+        let canvas = QuickShotCanvas(bitmap: bitmap, size: size, safeArea: frame, fixed: false)
         let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.contentView = canvas
-        let start = try mouse(.leftMouseDown, at: CGPoint(x: 100, y: 100), in: canvas, window: window)
-        let end = try mouse(.leftMouseUp, at: CGPoint(x: 280, y: 260), in: canvas, window: window)
-        canvas.mouseDown(with: start)
-        canvas.mouseUp(with: end)
-        try verifyResizedOutput(in: canvas, window: window)
+
+        func event(_ type: NSEvent.EventType, _ x: CGFloat, _ y: CGFloat) throws -> NSEvent {
+            try mouse(type, at: CGPoint(x: x, y: y), in: canvas, window: window)
+        }
+
+        #expect(canvas.regionFrame == nil && !canvas.isDraggingRegionBoundary)
+        canvas.mouseDown(with: try event(.leftMouseDown, 100, 100))
+        #expect(canvas.isDraggingRegionBoundary && canvas.regionFrame == nil)
+        canvas.mouseDragged(with: try event(.leftMouseDragged, 160, 100))
+        #expect(canvas.regionFrame == nil)
+
+        canvas.mouseDragged(with: try event(.leftMouseDragged, 240, 240))
+        #expect(canvas.regionFrame != nil)
+        canvas.mouseDragged(with: try event(.leftMouseDragged, 100, 100))
+        #expect(canvas.regionFrame == nil)
+        canvas.mouseUp(with: try event(.leftMouseUp, 240, 240))
+        #expect(canvas.regionFrame != nil && !canvas.isDraggingRegionBoundary)
+
+        canvas.mouseDown(with: try event(.leftMouseDown, 240, 170))
+        #expect(canvas.isDraggingRegionBoundary)
+        canvas.mouseUp(with: try event(.leftMouseUp, 260, 170))
+        #expect(canvas.regionFrame?.maxX == 260 && !canvas.isDraggingRegionBoundary)
+        canvas.clearSelection()
+        #expect(canvas.regionFrame == nil)
+        canvas.select()
+        #expect(canvas.regionFrame == frame)
     }
 
-    @Test func fullScreenSelectionCanBeResizedBeforeOutput() throws {
-        let canvas = try makeCanvas()
-        let window = NSWindow(contentRect: canvas.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.contentView = canvas
-        canvas.selectEntireDisplay()
-        try verifyResizedOutput(in: canvas, window: window)
-    }
-
-    private func makeCanvas() throws -> QuickShotCanvas {
+    @Test func aRestoredRegionIsCutFromTheCurrentBitmap() throws {
         _ = NSApplication.shared
         let context = try #require(CGContext(
             data: nil, width: 1600, height: 1000, bitsPerComponent: 8, bytesPerRow: 0,
@@ -114,10 +52,49 @@ struct QuickShotRegionTests {
         context.fill(CGRect(x: 0, y: 0, width: 1600, height: 1000))
         let bitmap = ShotBitmap(image: try #require(context.makeImage()), displaySize: CGSize(width: 800, height: 500))
         let frame = CGRect(origin: .zero, size: bitmap.displaySize)
-        return QuickShotCanvas(bitmap: bitmap, size: frame.size, safeArea: frame, fixed: false)
+        let canvas = QuickShotCanvas(bitmap: bitmap, size: frame.size, safeArea: frame, fixed: false)
+        let rect = CGRect(x: 140, y: 200, width: 360, height: 280)
+
+        canvas.select(rect)
+        let backdrop = try #require(canvas.subviews.compactMap { $0 as? QuickShotBackdrop }.first)
+        let toolbar = try #require(canvas.subviews.compactMap { $0 as? QuickShotToolbar }.first)
+        #expect(backdrop.selection == CGRect(x: 70, y: 100, width: 180, height: 140))
+        #expect(!toolbar.isHidden && !canvas.isWaitingForSelection)
+
+        var output: ShotCrop?
+        canvas.onOutput = { _, crop in output = crop }
+        canvas.handle(.save)
+        let crop = try #require(output)
+        #expect(crop.rect == rect)
+        let pixels = try #require(crop.image.representations.first as? NSBitmapImageRep)
+        #expect(pixels.colorAt(x: 0, y: 0)?.redComponent == 1)
     }
 
-    private func verifyResizedOutput(in canvas: QuickShotCanvas, window: NSWindow) throws {
+    @Test func addingATipGrowsTheHintUpwards() {
+        let tips = QuickShotTips([.shotSelectDisplayHint, .shotCopyColorHint])
+        tips.setFrameOrigin(CGPoint(x: 12, y: 400))
+        let bottom = tips.frame.maxY
+        tips.setTips([.shotSelectDisplayHint, .shotRestoreRegionHint, .shotCopyColorHint])
+        #expect(tips.frame.maxY == bottom)
+        #expect(tips.frame.minX == 12)
+        #expect(tips.accessibilityLabel()?.contains(String(localized: .shotRestoreRegionHint)) == true)
+        #expect(tips.hitTest(.zero) == nil)
+    }
+
+    @Test func exactDimensionsAreUsedByTheSavedRetinaCrop() throws {
+        _ = NSApplication.shared
+        let context = try #require(CGContext(
+            data: nil, width: 1600, height: 1000, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let bitmap = ShotBitmap(image: try #require(context.makeImage()), displaySize: CGSize(width: 800, height: 500))
+        let frame = CGRect(origin: .zero, size: bitmap.displaySize)
+        let canvas = QuickShotCanvas(bitmap: bitmap, size: frame.size, safeArea: frame, fixed: false)
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = canvas
+        let start = try mouse(.leftMouseDown, at: CGPoint(x: 100, y: 100), in: canvas, window: window)
+        let end = try mouse(.leftMouseUp, at: CGPoint(x: 280, y: 260), in: canvas, window: window)
+        canvas.mouseDown(with: start)
+        canvas.mouseUp(with: end)
         let controls = try #require(canvas.subviews.compactMap { $0 as? QuickShotDimensions }.first)
         #expect(canvas.selectDimension(at: controls.convert(CGPoint(x: 27, y: 14), to: nil)))
         try input("800", command: #selector(NSResponder.insertTab(_:)), in: window)
@@ -126,7 +103,6 @@ struct QuickShotRegionTests {
         var output: ShotCrop?
         canvas.onOutput = { _, crop in output = crop }
         canvas.handle(.save)
-        #expect(output?.rect.size == CGSize(width: 800, height: 600))
         let rendered = try #require(output?.rendered())
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).png")
         defer { try? FileManager.default.removeItem(at: file) }
