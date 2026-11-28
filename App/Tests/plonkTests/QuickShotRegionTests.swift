@@ -4,7 +4,7 @@ import Testing
 
 @MainActor
 struct QuickShotRegionTests {
-    @Test func hexIsHiddenAsSoonAsThePointerCreatesAnArea() throws {
+    @Test func regionFrameFollowsTheAreaBeingDrawn() throws {
         _ = NSApplication.shared
         let context = try #require(CGContext(
             data: nil, width: 800, height: 800, bitsPerComponent: 8, bytesPerRow: 0,
@@ -15,33 +15,32 @@ struct QuickShotRegionTests {
         let canvas = QuickShotCanvas(bitmap: bitmap, size: size, safeArea: frame, fixed: false)
         let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.contentView = canvas
-        let magnifier = try #require(canvas.magnifier)
 
         func event(_ type: NSEvent.EventType, _ x: CGFloat, _ y: CGFloat) throws -> NSEvent {
             try mouse(type, at: CGPoint(x: x, y: y), in: canvas, window: window)
         }
 
-        #expect(magnifier.showsHex)
+        #expect(canvas.regionFrame == nil && !canvas.isDraggingRegionBoundary)
         canvas.mouseDown(with: try event(.leftMouseDown, 100, 100))
-        #expect(canvas.isDraggingRegionBoundary && magnifier.showsHex)
+        #expect(canvas.isDraggingRegionBoundary && canvas.regionFrame == nil)
         canvas.mouseDragged(with: try event(.leftMouseDragged, 160, 100))
-        #expect(canvas.regionFrame == nil && magnifier.showsHex)
+        #expect(canvas.regionFrame == nil)
 
         canvas.mouseDragged(with: try event(.leftMouseDragged, 240, 240))
-        #expect(canvas.regionFrame != nil && !magnifier.showsHex)
+        #expect(canvas.regionFrame != nil)
         canvas.mouseDragged(with: try event(.leftMouseDragged, 100, 100))
-        #expect(canvas.regionFrame == nil && magnifier.showsHex)
+        #expect(canvas.regionFrame == nil)
         canvas.mouseUp(with: try event(.leftMouseUp, 240, 240))
-        #expect(canvas.regionFrame != nil && !canvas.isDraggingRegionBoundary && !magnifier.showsHex)
+        #expect(canvas.regionFrame != nil && !canvas.isDraggingRegionBoundary)
 
         canvas.mouseDown(with: try event(.leftMouseDown, 240, 170))
-        #expect(canvas.isDraggingRegionBoundary && !magnifier.showsHex)
+        #expect(canvas.isDraggingRegionBoundary)
         canvas.mouseUp(with: try event(.leftMouseUp, 260, 170))
-        #expect(canvas.regionFrame?.maxX == 260 && !canvas.isDraggingRegionBoundary && !magnifier.showsHex)
+        #expect(canvas.regionFrame?.maxX == 260 && !canvas.isDraggingRegionBoundary)
         canvas.clearSelection()
-        #expect(magnifier.showsHex)
-        canvas.handle(.selectDisplay)
-        #expect(canvas.regionFrame == frame && !magnifier.showsHex)
+        #expect(canvas.regionFrame == nil)
+        canvas.selectEntireDisplay()
+        #expect(canvas.regionFrame == frame)
     }
 
     @Test func exactDimensionsAreUsedByTheSavedRetinaCrop() throws {

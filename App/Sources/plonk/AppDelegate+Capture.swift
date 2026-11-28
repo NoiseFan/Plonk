@@ -72,6 +72,13 @@ extension AppDelegate {
                 if image == nil, mode == .screen { HUD.shared.show(.shotCaptureFailed) }
             }
         } else {
+            guard mode == .window || CGPreflightScreenCaptureAccess() else {
+                // Nothing else asks macOS for the grant on this path, and without a
+                // request Plonk never appears in the Screen Recording list. The header
+                // does not promise the call returns before the user answers.
+                DispatchQueue.global(qos: .userInitiated).async { _ = CGRequestScreenCaptureAccess() }
+                return HUD.shared.show(.shotCaptureFailed)
+            }
             MainActor.assumeIsolated { beginQuickShot(mode, screen: screen) }
         }
     }
@@ -79,7 +86,9 @@ extension AppDelegate {
     @MainActor private func beginQuickShot(_ mode: CaptureMode, screen: NSScreen?) {
         let previousWindow = NSApp.keyWindow
         let previousApp = NSWorkspace.shared.frontmostApplication
-        hotkeys.setSuspended(true)
+        hotkeys.setSuspended(true) { action, shortcut in
+            action == .captureRegion && ShotKeyCommand(hotkey: shortcut) == nil
+        }
         HUD.shared.dismiss()
         let hidden = hideOwnWindows()
         let session = QuickShotSession(previousApp: previousApp, model: model, folder: { [weak self] in

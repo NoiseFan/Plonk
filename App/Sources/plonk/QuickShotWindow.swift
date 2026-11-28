@@ -2,6 +2,8 @@ import AppKit
 
 final class QuickShotWindow: NSWindow {
     let canvas: QuickShotCanvas
+    /// Region captures only: a window capture has no boundary to line up.
+    let magnifier: QuickShotMagnifier?
     var onRegionPointerChange: ((CGPoint) -> Void)?
     private var interactingWithStyle = false
 
@@ -12,6 +14,7 @@ final class QuickShotWindow: NSWindow {
                               width: visible.width, height: visible.height)
         canvas = QuickShotCanvas(bitmap: bitmap, size: frame.size, safeArea: safeArea, fixed: fixed,
                                  model: model, annotation: annotation)
+        magnifier = fixed ? nil : QuickShotMagnifier(image: bitmap.image)
         super.init(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         setFrame(frame, display: false)
         isReleasedWhenClosed = false
@@ -19,6 +22,7 @@ final class QuickShotWindow: NSWindow {
         acceptsMouseMovedEvents = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         contentView = canvas
+        if let magnifier { canvas.addSubview(magnifier) }
         initialFirstResponder = canvas
     }
 
