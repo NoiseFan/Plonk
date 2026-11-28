@@ -1,6 +1,48 @@
 import CoreGraphics
 
 enum QuickShotLayout {
+    static let controlInset: CGFloat = 12
+    static let selectionToolbarGap: CGFloat = 12
+    struct MagnifierPlacement {
+        let frame: CGRect
+        let drawingOffset: CGPoint
+    }
+
+    // `details` is measured from the uncropped magnifier's top-left.
+    static func magnifier(size: CGSize, details: CGRect, near pointer: CGPoint, area: CGRect,
+                          avoiding obstacle: CGRect?) -> MagnifierPlacement? {
+        let gap: CGFloat = 10
+        let left = pointer.x - gap - size.width
+        let right = pointer.x + gap
+        let above = pointer.y - gap - size.height
+        let below = pointer.y + gap
+        let origins = [(left, above), (right, above), (right, below), (left, below)]
+        let candidates: [(full: CGRect, visible: CGRect)] = origins.compactMap { x, y in
+            let full = CGRect(origin: CGPoint(x: x, y: y), size: size)
+            let visible = full.intersection(area)
+            return visible.isEmpty ? nil : (full, visible)
+        }
+        let safeArea = area.insetBy(dx: 5, dy: 5)
+
+        func surface(_ rect: CGRect) -> CGFloat { rect.isEmpty ? 0 : rect.width * rect.height }
+        func priority(_ candidate: (full: CGRect, visible: CGRect)) -> (Int, CGFloat, CGFloat) {
+            let overlap = obstacle.map { surface($0.intersection(candidate.visible)) } ?? 0
+            let safe = safeArea.contains(candidate.full)
+            if safe && overlap == 0 { return (3, 0, 0) }
+            if area.contains(candidate.full) { return (2, -overlap, safe ? 1 : 0) }
+
+            let translatedDetails = details.offsetBy(dx: candidate.full.minX, dy: candidate.full.minY)
+            let showsDetails = candidate.visible.contains(translatedDetails)
+            return (showsDetails ? 1 : 0, surface(candidate.visible), -overlap)
+        }
+
+        guard let best = candidates.max(by: { priority($0) < priority($1) }) else { return nil }
+        // Keep the original drawing origin when the visible frame is cropped.
+        return MagnifierPlacement(frame: best.visible,
+                                  drawingOffset: CGPoint(x: best.full.minX - best.visible.minX,
+                                                         y: best.full.minY - best.visible.minY))
+    }
+
     struct StylePlacement: Equatable {
         let panel: CGRect
         let help: CGRect
@@ -88,45 +130,61 @@ enum QuickShotLayout {
     /// puts the panel over the image.
     static func fixed(image: CGSize, toolbar: CGSize, reserve: CGFloat = 0,
                       area: CGRect) -> (image: CGRect, toolbar: CGRect) {
-        let area = area.insetBy(dx: 10, dy: 10)
+        let area = area.insetBy(dx: controlInset, dy: controlInset)
         let gap: CGFloat = 12
-        let below = gap + toolbar.height + (reserve > 0 ? gap + reserve : 0)
-        let scale = min(1, area.width / image.width, max(1, area.height - below) / image.height)
+        let panelSpace = reserve > 0 ? gap + reserve : 0
+        let bar = bottomToolbar(toolbar, in: area).offsetBy(dx: 0, dy: -panelSpace)
+        let previewHeight = max(1, bar.minY - gap - area.minY)
+        let scale = min(1, area.width / image.width, previewHeight / image.height)
         let size = CGSize(width: image.width * scale, height: image.height * scale)
-        let top = area.midY - (size.height + below) / 2
-        return (CGRect(x: area.midX - size.width / 2, y: top, width: size.width, height: size.height),
-                CGRect(x: area.midX - toolbar.width / 2, y: top + size.height + gap,
-                       width: toolbar.width, height: toolbar.height))
+        let top = area.minY + (previewHeight - size.height) / 2
+        return (CGRect(x: area.midX - size.width / 2, y: top, width: size.width, height: size.height), bar)
     }
 
     static func place(dimensions: CGSize, toolbar: CGSize, selection: CGRect, area: CGRect)
         -> (dimensions: CGRect, toolbar: CGRect) {
-        let area = area.insetBy(dx: 5, dy: 5)
-        func frame(for size: CGSize, y: CGFloat) -> CGRect {
-            CGRect(x: selection.minX.clamped(to: area.minX...max(area.minX, area.maxX - size.width)),
-                   y: y.clamped(to: area.minY...max(area.minY, area.maxY - size.height)),
-                   width: size.width, height: size.height)
+        let area = area.insetBy(dx: controlInset, dy: controlInset)
+        let bar = regionToolbar(toolbar, outside: selection, in: area)
+        let xLimit = area.minX...max(area.minX, area.maxX - dimensions.width)
+        let x = selection.minX.clamped(to: xLimit)
+        let below = max(area.minY, selection.maxY + 10)
+        let candidates = [selection.minY - 10 - dimensions.height,
+                          below, max(below, bar.maxY + 8), bar.minY - 8 - dimensions.height]
+        for y in candidates {
+            let label = CGRect(origin: CGPoint(x: x, y: y), size: dimensions)
+            if area.contains(label), !label.intersects(selection), !label.intersects(bar) {
+                return (label, bar)
+            }
         }
-        let below = selection.maxY + 16
-        let labelAbove = selection.minY - 10 - dimensions.height
-        var label = frame(for: dimensions, y: labelAbove)
-        let above = label.minY - 8 - toolbar.height
-        let toolbarY = below + toolbar.height > area.maxY && above >= area.minY ? above : below
-        let bar = frame(for: toolbar, y: toolbarY)
-        let afterBar = bar.maxY + 8
-        let fitsAfterBar = afterBar + dimensions.height <= area.maxY
-        if labelAbove < area.minY {
-            // Clamped down it would sit on the top edge and swallow its handles. The badge
-            // is interactive, so it goes after the toolbar, or inside past the corner handles.
-            label = fitsAfterBar ? frame(for: dimensions, y: afterBar) : CGRect(
-                x: (selection.minX + ShotSelection.handleLength)
-                    .clamped(to: area.minX...max(area.minX, area.maxX - dimensions.width)),
-                y: max(selection.minY, area.minY) + ShotSelection.handleLength,
-                width: dimensions.width, height: dimensions.height)
-        } else if label.intersects(bar) {
-            let beforeBar = bar.minY - 8 - dimensions.height
-            label = frame(for: dimensions, y: fitsAfterBar ? afterBar : beforeBar)
-        }
+
+        // An interactive badge inside the selection must leave its top handles reachable.
+        let handle = ShotSelection.handleLength
+        let label = CGRect(x: (selection.minX + handle).clamped(to: xLimit),
+                           y: max(selection.minY, area.minY) + handle,
+                           width: dimensions.width, height: dimensions.height)
         return (label, bar)
+    }
+
+    private static func regionToolbar(_ size: CGSize, outside selection: CGRect, in area: CGRect) -> CGRect {
+        let gap = selectionToolbarGap
+        let lowestY = area.maxY - size.height
+        let below = selection.maxY + gap
+        if below >= area.minY, below <= lowestY {
+            let x = (selection.midX - size.width / 2).clamped(to: area.minX...max(area.minX, area.maxX - size.width))
+            return CGRect(origin: CGPoint(x: x, y: below), size: size)
+        }
+
+        let left = selection.minX - area.minX
+        let right = area.maxX - selection.maxX
+        guard max(left, right) >= size.width + gap, lowestY >= area.minY else {
+            return bottomToolbar(size, in: area)
+        }
+        let x = left >= right ? selection.minX - gap - size.width : selection.maxX + gap
+        let y = (selection.maxY - size.height).clamped(to: area.minY...lowestY)
+        return CGRect(origin: CGPoint(x: x, y: y), size: size)
+    }
+
+    private static func bottomToolbar(_ size: CGSize, in area: CGRect) -> CGRect {
+        CGRect(origin: CGPoint(x: area.midX - size.width / 2, y: area.maxY - size.height), size: size)
     }
 }
