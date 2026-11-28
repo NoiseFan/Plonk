@@ -20,4 +20,22 @@ struct QuickShotPressTests {
             == .adjust(handle: .zero))
         #expect(QuickShotPress(handle: .zero, insideSelection: true, drawing: true, marksExist: true) == .mark)
     }
+
+    @Test func pressInsideAFullDisplaySelectionDrawsAFreshRegion() {
+        #expect(QuickShotPress(handle: .zero, insideSelection: true, coversDisplay: true, drawing: false,
+                               marksExist: false) == .select)
+    }
+
+    @Test func fullDisplaySelectionKeepsMarksAndDrawingTools() {
+        #expect(QuickShotPress(handle: .zero, insideSelection: true, coversDisplay: true, drawing: false,
+                               marksExist: true) == .adjust(handle: .zero))
+        #expect(QuickShotPress(handle: .zero, insideSelection: true, coversDisplay: true, drawing: true,
+                               marksExist: false) == .mark)
+    }
+
+    @Test func handlesOfAFullDisplaySelectionStillResize() {
+        let corner = CGPoint(x: 1, y: 1)
+        #expect(QuickShotPress(handle: corner, insideSelection: true, coversDisplay: true, drawing: false,
+                               marksExist: false) == .adjust(handle: corner))
+    }
 }

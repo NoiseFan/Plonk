@@ -73,6 +73,10 @@ extension AppDelegate {
             }
         } else {
             guard mode == .window || CGPreflightScreenCaptureAccess() else {
+                // Nothing else asks macOS for the grant on this path, and without a
+                // request Plonk never appears in the Screen Recording list. The header
+                // does not promise the call returns before the user answers.
+                DispatchQueue.global(qos: .userInitiated).async { _ = CGRequestScreenCaptureAccess() }
                 return HUD.shared.show(.shotCaptureFailed)
             }
             MainActor.assumeIsolated { beginQuickShot(mode, screen: screen) }

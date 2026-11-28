@@ -145,10 +145,10 @@ final class QuickShotSession: NSObject {
     }
 
     private func selectEntireDisplay(in window: QuickShotWindow) {
-        guard isWaitingForSelection, windows.contains(where: { $0 === window }) else { return }
+        guard windows.contains(where: { $0 === window }), !windows.contains(where: \.canvas.hasMarks) else { return }
         window.canvas.selectEntireDisplay()
         if window.isVisible { focus(window) }
-        windows.filter { $0 !== window }.forEach { $0.orderOut(nil) }
+        windows.filter { $0 !== window }.forEach(dismiss)
         windows = [window]
     }
 
@@ -257,6 +257,11 @@ final class QuickShotSession: NSObject {
         close(restoreFocus: false)
     }
 
+    private func dismiss(_ window: QuickShotWindow) {
+        if let sheet = window.attachedSheet { window.endSheet(sheet, returnCode: .cancel) }
+        window.orderOut(nil)
+    }
+
     private func close(restoreFocus: Bool) {
         guard let onClose else { return }
         let shouldRestore = restoreFocus && NSApp.isActive
@@ -268,10 +273,7 @@ final class QuickShotSession: NSObject {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         keyMonitor = nil
-        for window in windows {
-            if let sheet = window.attachedSheet { window.endSheet(sheet, returnCode: .cancel) }
-            window.orderOut(nil)
-        }
+        windows.forEach(dismiss)
         windows.removeAll()
         onClose()
         if shouldRestore, let previousApp,
