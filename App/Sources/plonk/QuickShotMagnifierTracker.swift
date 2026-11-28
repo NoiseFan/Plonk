@@ -46,7 +46,7 @@ final class QuickShotMagnifierTracker {
         let waiting = isWaiting()
         // During a drag only its starting canvas samples, even on another display.
         let target = windows.first { $0.canvas.isDraggingRegionBoundary }
-            ?? (waiting ? windows.first { $0.magnifier != nil && $0.frame.contains(pointer) } : nil)
+            ?? (waiting ? windows.first { $0.magnifier != nil && NSMouseInRect(pointer, $0.frame, false) } : nil)
         if current !== target { current?.magnifier?.hide() }
         current = target
         guard let target, let magnifier = target.magnifier else { return }
