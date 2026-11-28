@@ -9,13 +9,13 @@ final class QuickShotSession: NSObject {
     private let delivery: QuickShotDelivery
     private var onClose: (() -> Void)?
     private var windows: [QuickShotWindow] = []
-    private var displayCaptures: [Process] = []
     private var keyMonitor: Any?
     private lazy var magnifier = QuickShotMagnifierTracker(windows: { [weak self] in self?.windows ?? [] },
                                                            isWaiting: { [weak self] in self?.isWaitingForSelection ?? false })
     private var pickerMonitor: Any?
     private var picker: Process?
     private var pickLocation: CGPoint?
+    private var captureTask: Task<Void, Never>?
 
     init(previousApp: NSRunningApplication?, model: AppModel, lastRegion: ShotRegionRecord?,
          rememberRegion: @escaping (ShotRegionRecord) -> Void, folder: @escaping () -> String,
@@ -40,48 +40,55 @@ final class QuickShotSession: NSObject {
         NotificationCenter.default.addObserver(
             self, selector: #selector(cancel), name: NSApplication.didChangeScreenParametersNotification, object: NSApp
         )
-        if mode != .window {
-            NSWorkspace.shared.notificationCenter.addObserver(
-                self, selector: #selector(frontmostAppChanged), name: NSWorkspace.didActivateApplicationNotification,
-                object: nil
-            )
-        }
-        // Give the window server a turn after ordering Plonk's windows out.
-        DispatchQueue.main.async { [weak self] in
-            guard let self, onClose != nil else { return }
-            switch mode {
-            case .region: captureRegions(screens)
-            case .window: pickWindow()
-            case .screen:
-                guard let screen else { return captureFailed() }
-                // The whole display is what F gives; it is no region worth keeping for R.
-                delivery.remembersRegion = false
-                captureRegions([screen], selectingEntireDisplay: true)
+        switch mode {
+        case .region:
+            watchForAppSwitch()
+            captureDisplays(screens)
+        case .window:
+            // Give the window server a turn after ordering Plonk's windows out.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, onClose != nil else { return }
+                pickWindow()
             }
+        case .screen:
+            guard let screen else { return captureFailed() }
+            watchForAppSwitch()
+            // The whole display is what F gives; it is no region worth keeping for R.
+            delivery.remembersRegion = false
+            captureDisplays([screen], selectingEntireDisplay: true)
         }
     }
 
-    private func captureRegions(_ screens: [NSScreen], selectingEntireDisplay: Bool = false) {
+    private func watchForAppSwitch() {
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self, selector: #selector(frontmostAppChanged), name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+    }
+
+    /// Plonk's own windows stay up: the capture leaves them out, so nothing flickers.
+    private func captureDisplays(_ screens: [NSScreen], selectingEntireDisplay: Bool = false) {
         let windowBounds = selectingEntireDisplay ? [] : WindowServer.screenshotWindowBounds()
-        for screen in screens {
-            let process = ScreenshotManager.captureDisplay(screen) { [weak self] image in
+        captureTask = Task { [weak self] in
+            do {
+                let bitmaps = try await ShotDisplayCapture.capture(screens)
+                try Task.checkCancellation()
                 guard let self, onClose != nil else { return }
-                guard let bitmap = ShotBitmap(capture: image, displaySize: screen.frame.size) else {
-                    return captureFailed()
-                }
-                let window = addWindow(for: screen, bitmap: bitmap, fixed: false)
-                let origin = CGSpace.flip(screen.frame).origin
-                window.canvas.startsOnWindow = { point in
-                    let location = CGPoint(x: origin.x + point.x, y: origin.y + point.y)
-                    return windowBounds.contains { $0.contains(location) }
-                }
-                guard windows.count == screens.count else { return }
-                displayCaptures.removeAll()
                 guard !hasSwitchedApps else { return cancelOnAppSwitch() }
-                if selectingEntireDisplay { selectEntireDisplay(in: window) }
+                for (screen, bitmap) in zip(screens, bitmaps) {
+                    let window = addWindow(for: screen, bitmap: bitmap, fixed: false)
+                    let origin = CGSpace.flip(screen.frame).origin
+                    window.canvas.startsOnWindow = { point in
+                        let location = CGPoint(x: origin.x + point.x, y: origin.y + point.y)
+                        return windowBounds.contains { $0.contains(location) }
+                    }
+                }
+                if selectingEntireDisplay, let window = windows.first { selectEntireDisplay(in: window) }
                 present()
+            } catch {
+                guard let self, onClose != nil else { return }
+                captureFailed()
             }
-            if let process { displayCaptures.append(process) }
         }
     }
 
@@ -120,8 +127,9 @@ final class QuickShotSession: NSObject {
 
     @discardableResult
     private func addWindow(for screen: NSScreen, bitmap: ShotBitmap, fixed: Bool) -> QuickShotWindow {
-        let window = QuickShotWindow(screen: screen, bitmap: bitmap, fixed: fixed, model: model,
-                                     annotation: annotation, lastRegion: lastRegion)
+        let window = QuickShotWindow(frame: screen.frame, visibleFrame: screen.visibleFrame, bitmap: bitmap,
+                                     fixed: fixed, model: model, annotation: annotation,
+                                     regionDisplay: .init(screen: screen, bitmap: bitmap), lastRegion: lastRegion)
         window.canvas.onCancel = { [weak self] in self?.cancel() }
         if !fixed { magnifier.track(window) }
         window.canvas.onSelect = { [weak self, weak window] in
@@ -161,14 +169,21 @@ final class QuickShotSession: NSObject {
     }
 
     private func present() {
+        // Plonk stays inactive behind its panels, so an app switch is the signal that
+        // still arrives while a Save As sheet, not a panel, holds the keyboard.
         NSWorkspace.shared.notificationCenter.removeObserver(self)
+        watchForAppSwitch()
         NotificationCenter.default.addObserver(
             self, selector: #selector(cancelOnAppSwitch), name: NSApplication.didResignActiveNotification,
             object: NSApp
         )
         updateSelectionHints()
-        windows.forEach { $0.orderFrontRegardless() }
-        NSApp.activate(ignoringOtherApps: true)
+        for window in windows {
+            NotificationCenter.default.addObserver(
+                self, selector: #selector(windowResignedKey), name: NSWindow.didResignKeyNotification, object: window
+            )
+            window.show()
+        }
         if let target = windowUnderPointer ?? windows.first { focus(target) }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             self?.handleShortcut(event) == true ? nil : event
@@ -221,6 +236,16 @@ final class QuickShotSession: NSObject {
         return true
     }
 
+    @objc private func windowResignedKey() {
+        // Another display's panel or the Save As sheet can take focus during this event.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, onClose != nil,
+                  !windows.contains(where: { $0.isKeyWindow || $0.attachedSheet?.isKeyWindow == true })
+            else { return }
+            cancel()
+        }
+    }
+
     private func captureFailed() {
         cancel()
         HUD.shared.show(.shotCaptureFailed)
@@ -232,7 +257,8 @@ final class QuickShotSession: NSObject {
 
     private var hasSwitchedApps: Bool {
         guard let frontmost = NSWorkspace.shared.frontmostApplication, let previousApp else { return false }
-        return frontmost.processIdentifier != previousApp.processIdentifier
+        let pid = frontmost.processIdentifier
+        return pid != previousApp.processIdentifier && pid != ProcessInfo.processInfo.processIdentifier
     }
 
     @objc private func frontmostAppChanged() {
@@ -252,9 +278,9 @@ final class QuickShotSession: NSObject {
         guard let onClose else { return }
         let shouldRestore = restoreFocus && NSApp.isActive
         self.onClose = nil
+        captureTask?.cancel()
+        captureTask = nil
         stopPicker()
-        displayCaptures.filter(\.isRunning).forEach { $0.terminate() }
-        displayCaptures.removeAll()
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }

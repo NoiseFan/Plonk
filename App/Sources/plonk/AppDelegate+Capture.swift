@@ -90,7 +90,8 @@ extension AppDelegate {
             action == .captureRegion && ShotKeyCommand(hotkey: shortcut) == nil
         }
         HUD.shared.dismiss()
-        let hidden = hideOwnWindows()
+        let hidden = mode.quickShotNeedsHiddenWindows ? hideOwnWindows() : nil
+        if hidden == nil { suspendCaptureOverlays() }
         let session = QuickShotSession(previousApp: previousApp, model: model, lastRegion: lastShotRegion,
                                        rememberRegion: { [weak self] in self?.lastShotRegion = $0 },
                                        folder: { [weak self] in
@@ -98,7 +99,11 @@ extension AppDelegate {
         }, onClose: { [weak self, weak previousWindow] in
             guard let self else { return }
             quickShot = nil
-            showOwnWindows(hidden)
+            if let hidden {
+                showOwnWindows(hidden)
+            } else {
+                resumeCaptureOverlays()
+            }
             if NSApp.isActive, let previousWindow, previousWindow.isVisible {
                 previousWindow.makeKey()
             }
@@ -133,11 +138,7 @@ extension AppDelegate {
     /// capture: settings and editors, but also the crosshairs and any pinned
     /// crop, which are floating over exactly the area being photographed.
     func hideOwnWindows() -> [NSWindow] {
-        // Counted, because a capture can start while a pinned crop is still
-        // choosing its region: the first one to finish must not put the
-        // overlays back into the other one's photograph.
-        captureDepth += 1
-        mouse.suspend()
+        suspendCaptureOverlays()
         let hidden = (presenter.visible + crops.visibleWindows + [guidePanel].compactMap { $0 })
             .filter { $0.isVisible }
         hidden.forEach { $0.orderOut(nil) }
@@ -145,8 +146,18 @@ extension AppDelegate {
     }
 
     func showOwnWindows(_ hidden: [NSWindow]) {
-        captureDepth = max(0, captureDepth - 1)
         hidden.forEach { $0.orderFront(nil) }
+        resumeCaptureOverlays()
+    }
+
+    private func suspendCaptureOverlays() {
+        // A capture can start while a pinned crop is still choosing its region.
+        captureDepth += 1
+        mouse.suspend()
+    }
+
+    private func resumeCaptureOverlays() {
+        captureDepth = max(0, captureDepth - 1)
         guard captureDepth == 0 else { return }
         mouse.resume()
     }

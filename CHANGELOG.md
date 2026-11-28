@@ -71,6 +71,12 @@ What changed in each release, from a user's side. The commit log has the rest.
   and the command palette are glass too.
 - A prompt queued for an agent that has not connected yet says so in one line,
   and a spoken prompt now reports it the same way a typed one does.
+- **Quick Actions appear at once.** The overlay opens without an entrance
+  animation and without bringing Plonk to the front; Save As still does. For
+  region and full-screen captures Plonk's own windows stay where they are
+  instead of hiding, and the capture leaves them out, so a window that was
+  still closing no longer shows up in the screenshot. Plonk's menu bar icon
+  stays in the picture.
 
 ## 0.4.3 — 2026-09-22
 

@@ -45,6 +45,8 @@ final class QuickShotDelivery {
         case .saveAs:
             guard window.attachedSheet == nil else { return }
             let panel = ShotSavePanel.make(in: folder())
+            // The panels take keys without activating Plonk; an ordinary sheet does not.
+            NSApp.activate(ignoringOtherApps: true)
             panel.beginSheetModal(for: window) { [weak self, weak window] response in
                 // Another display may have taken the selection while the sheet was up.
                 guard let self, let window, isOpen(), window.canvas.hasSelection, response == .OK,
