@@ -4,9 +4,9 @@ final class QuickShotWindow: NSWindow {
     let canvas: QuickShotCanvas
     /// Region captures only: a window capture has no boundary to line up.
     let magnifier: QuickShotMagnifier?
-    /// What a region saved from here is keyed to: the display and its geometry now.
+    /// What a region copied, saved or opened from here is keyed to: the display and its geometry now.
     let regionDisplay: ShotRegionRecord.Display?
-    /// The last saved region, in pixels, when it was taken on this display as it is now.
+    /// The last region used, in pixels, when it was taken on this display as it is now.
     let restorableRegion: CGRect?
     var onRegionPointerChange: ((CGPoint) -> Void)?
     private var interactingWithStyle = false
@@ -39,6 +39,7 @@ final class QuickShotWindow: NSWindow {
     }
 
     override var canBecomeKey: Bool { true }
+
     func canvasPoint(at screenPoint: CGPoint) -> CGPoint {
         canvas.convert(convertPoint(fromScreen: screenPoint), from: nil)
     }

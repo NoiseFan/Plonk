@@ -37,11 +37,11 @@ What changed in each release, from a user's side. The commit log has the rest.
   the `F` and `C` shortcuts while you choose. Drag to draw a region and keep the other
   displays available for a replacement selection. Dragging inside a
   full-display selection draws a new region.
-- **Restore the last screenshot region.** Press R while choosing a region to
+- **Restore the last screenshot region.** Press `R` while choosing a region to
   reuse the last copied, saved or opened selection on the display it came from,
   cut from the new screenshot. It is offered only while that display keeps the
-  same resolution and scaling, and the hint lists R on that display.
-  Full-screen captures do not replace it.
+  same resolution and scaling, and the hint lists `R` on that display.
+  Full-screen captures do not replace it, and Plonk forgets it when it quits.
 - **Adjust the region before opening the editor.** Drag inside the blue
   outline to move it, drag an edge or corner, or enter exact pixel dimensions.
   The width and height fields fit four digits while editing. Click the padlock

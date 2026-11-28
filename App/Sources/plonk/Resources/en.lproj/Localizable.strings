@@ -69,13 +69,13 @@
 /* Screenshots. */
 "shot.capture" = "Capture";
 "shot.captureRegion" = "Capture Region";
-"shot.restoreRegionHint" = "Press R to restore the last selection";
 "shot.afterCapture" = "After capture";
 "shot.afterQuickActions" = "Quick Actions";
 "shot.afterEditor" = "Open Editor";
 "shot.captureFailed" = "Could not capture the display. Check Screen Recording permission in System Settings.";
 "shot.selectDisplayHint" = "Press F to select the full screen";
 "shot.copyColorHint" = "Press C to copy the color";
+"shot.restoreRegionHint" = "Press R to restore the last selection";
 "shot.copyFailed" = "Could not copy the screenshot.";
 "shot.selectionWidth" = "Selection width";
 "shot.selectionHeight" = "Selection height";
