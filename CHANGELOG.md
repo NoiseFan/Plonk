@@ -41,6 +41,7 @@ What changed in each release, from a user's side. The commit log has the rest.
   reuse the last copied, saved or opened selection on the display it came from,
   cut from the new screenshot. It is offered only while that display keeps the
   same resolution and scaling, and the hint lists R on that display.
+  Full-screen captures do not replace it.
 - **Adjust the region before opening the editor.** Drag inside the blue
   outline to move it, drag an edge or corner, or enter exact pixel dimensions.
   The width and height fields fit four digits while editing. Click the padlock

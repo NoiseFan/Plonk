@@ -12,6 +12,7 @@ final class QuickShotDelivery {
     /// Ends the session; the argument says whether focus goes back to the previous app.
     var close: (Bool) -> Void = { _ in }
     var isOpen: () -> Bool = { false }
+    var remembersRegion = true
 
     init(folder: @escaping () -> String, annotation: ShotAnnotationState,
          rememberRegion: @escaping (ShotRegionRecord) -> Void,
@@ -69,7 +70,7 @@ final class QuickShotDelivery {
     }
 
     private func remember(_ crop: ShotCrop, in window: QuickShotWindow) {
-        guard let display = window.regionDisplay else { return }
+        guard remembersRegion, let display = window.regionDisplay else { return }
         rememberRegion(ShotRegionRecord(display: display, rect: crop.rect))
     }
 }

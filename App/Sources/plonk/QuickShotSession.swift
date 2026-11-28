@@ -54,6 +54,8 @@ final class QuickShotSession: NSObject {
             case .window: pickWindow()
             case .screen:
                 guard let screen else { return captureFailed() }
+                // The whole display is what F gives; it is no region worth keeping for R.
+                delivery.remembersRegion = false
                 captureRegions([screen], selectingEntireDisplay: true)
             }
         }
