@@ -44,6 +44,35 @@ struct ShotKeyCommandTests {
         #expect(command(kVK_ANSI_S, "o", .command) == nil)
     }
 
+    @Test func selectDisplayFollowsTheLetterF() {
+        #expect(command(kVK_ANSI_Y, "f", []) == .selectDisplay)
+        #expect(command(kVK_ANSI_F, "u", []) == nil)
+        #expect(command(kVK_ANSI_F, nil, []) == .selectDisplay)
+        #expect(command(kVK_ANSI_Y, "f", .shift) == nil)
+    }
+
+    @Test func copyColorFollowsTheLetterC() {
+        #expect(command(kVK_ANSI_C, "c", []) == .copyColor)
+        #expect(command(kVK_ANSI_C, "с", []) == .copyColor)
+        #expect(command(kVK_ANSI_C, "c", .command) == nil)
+    }
+
+    @Test func plusAndMinusZoomTheMagnifier() {
+        #expect(command(kVK_ANSI_Equal, "=", []) == .zoomMagnifier(increasing: true))
+        #expect(command(kVK_ANSI_Equal, "+", .shift) == .zoomMagnifier(increasing: true))
+        #expect(command(kVK_ANSI_Minus, "-", []) == .zoomMagnifier(increasing: false))
+        #expect(command(kVK_ANSI_Minus, "-", .command) == nil)
+    }
+
+    @Test func onlyToolbarKeysMapToAToolbarAction() {
+        #expect(ShotKeyCommand.copy.toolbarAction == .output(.copy))
+        #expect(ShotKeyCommand.save.toolbarAction == .output(.save))
+        #expect(ShotKeyCommand.cancel.toolbarAction == .cancel)
+        #expect(ShotKeyCommand.selectDisplay.toolbarAction == nil)
+        #expect(ShotKeyCommand.copyColor.toolbarAction == nil)
+        #expect(ShotKeyCommand.zoomMagnifier(increasing: true).toolbarAction == nil)
+    }
+
     @Test func nonLatinLayoutFallsBackToTheKeyPosition() {
         #expect(command(kVK_ANSI_Z, "я", .command) == .undo)
         #expect(command(kVK_ANSI_Z, "Я", [.command, .shift]) == .redo)
@@ -52,6 +81,27 @@ struct ShotKeyCommandTests {
 
     @Test func ordinaryTypingIsLeftToAppKit() {
         #expect(command(kVK_ANSI_S, "s", []) == nil)
+    }
+
+    @Test func restoreRegionFollowsTheTypedLetter() {
+        #expect(command(kVK_ANSI_R, "r", []) == .restoreRegion)
+        #expect(command(kVK_ANSI_P, "R", .capsLock) == .restoreRegion)
+        #expect(command(kVK_ANSI_R, "к", []) == .restoreRegion)
+        #expect(command(kVK_ANSI_R, "p", []) == nil)
+    }
+
+    @Test(arguments: [NSEvent.ModifierFlags.command, .shift, .option, .control])
+    func modifiedRestoreIsLeftToAppKit(_ flags: NSEvent.ModifierFlags) {
+        #expect(command(kVK_ANSI_R, "r", flags) == nil)
+    }
+
+    @Test func holdingRestoreDoesNotRepeatIt() {
+        #expect(command(kVK_ANSI_R, "r", [], repeating: true) == nil)
+    }
+
+    @Test func unmodifiedFSelectsTheDisplay() {
+        #expect(command(kVK_ANSI_F, "f", []) == .selectDisplay)
+        #expect(command(kVK_ANSI_F, "f", .command) == nil)
     }
 
     @Test func otherModifierCombinationsAreLeftToAppKit() {
