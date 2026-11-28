@@ -192,7 +192,8 @@ final class QuickShotSession: NSObject {
                 magnifier.update(at: NSEvent.mouseLocation)
             }
         case .copyColor:
-            if let hex = magnifier.hex {
+            // Copying ends the capture, so it must not throw away marks drawn on a selection.
+            if let hex = magnifier.hex, !windows.contains(where: \.canvas.hasMarks) {
                 NSPasteboard.general.replaceContents(with: hex)
                 close(restoreFocus: true)
             }
