@@ -169,7 +169,10 @@ final class QuickShotSession: NSObject {
     }
 
     private func present() {
+        // Plonk stays inactive behind its panels, so an app switch is the signal that
+        // still arrives while a Save As sheet, not a panel, holds the keyboard.
         NSWorkspace.shared.notificationCenter.removeObserver(self)
+        watchForAppSwitch()
         NotificationCenter.default.addObserver(
             self, selector: #selector(cancelOnAppSwitch), name: NSApplication.didResignActiveNotification,
             object: NSApp
@@ -254,7 +257,8 @@ final class QuickShotSession: NSObject {
 
     private var hasSwitchedApps: Bool {
         guard let frontmost = NSWorkspace.shared.frontmostApplication, let previousApp else { return false }
-        return frontmost.processIdentifier != previousApp.processIdentifier
+        let pid = frontmost.processIdentifier
+        return pid != previousApp.processIdentifier && pid != ProcessInfo.processInfo.processIdentifier
     }
 
     @objc private func frontmostAppChanged() {
