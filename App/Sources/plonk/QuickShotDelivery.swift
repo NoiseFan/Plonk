@@ -46,7 +46,9 @@ final class QuickShotDelivery {
             guard window.attachedSheet == nil else { return }
             let panel = ShotSavePanel.make(in: folder())
             panel.beginSheetModal(for: window) { [weak self, weak window] response in
-                guard let self, let window, isOpen(), response == .OK, let url = panel.url else { return }
+                // Another display may have taken the selection while the sheet was up.
+                guard let self, let window, isOpen(), window.canvas.hasSelection, response == .OK,
+                      let url = panel.url else { return }
                 save(crop, in: window, to: .path(url.path))
             }
         }
