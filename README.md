@@ -60,8 +60,8 @@ brew install --cask ostapondo/plonk/plonk
 ```
 
 Grant Accessibility when it asks, then relaunch. Screen Recording is asked for
-separately, the first time you capture. Nothing else: no Full Disk Access, no
-Automation, no Keychain.
+separately, the first time you capture, and can also be granted in System
+Settings. Nothing else: no Full Disk Access, no Automation, no Keychain.
 
 Plonk is signed but not notarized, so macOS holds a copy you download by hand.
 The cask takes care of that for you.

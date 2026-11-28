@@ -12,9 +12,12 @@ enum ScreenIdentity {
 
     static func uuid(forIndex index: Int) -> String? {
         let screens = NSScreen.screens
-        guard screens.indices.contains(index),
-              let id = displayID(for: screens[index]),
-              let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue()
+        guard screens.indices.contains(index) else { return nil }
+        return uuid(for: screens[index])
+    }
+
+    static func uuid(for screen: NSScreen) -> String? {
+        guard let id = displayID(for: screen), let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue()
         else { return nil }
         return CFUUIDCreateString(nil, uuid) as String
     }

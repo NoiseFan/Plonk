@@ -57,9 +57,10 @@ enum ScreenshotManager {
     /// Captures a rect given in CG coordinates — origin top-left of the primary
     /// display — without asking the user for anything. `screencapture -R` takes
     /// exactly that space, which is why regions are carried in it everywhere.
-    static func captureRegion(_ region: CGRect, completion: @escaping (NSImage?) -> Void) {
+    @discardableResult
+    static func captureRegion(_ region: CGRect, completion: @escaping (NSImage?) -> Void) -> Process? {
         let rect = "\(Int(region.minX)),\(Int(region.minY)),\(Int(region.width)),\(Int(region.height))"
-        run(["-R", rect], completion: completion)
+        return run(["-R", rect], completion: completion)
     }
 
     /// Photographs one window by id, whatever is stacked on top of it, and
@@ -70,7 +71,8 @@ enum ScreenshotManager {
         run(["-o", "-l", String(id)], completion: completion)
     }
 
-    static func captureDisplay(_ screen: NSScreen, completion: @escaping (NSImage?) -> Void) {
+    @discardableResult
+    static func captureDisplay(_ screen: NSScreen, completion: @escaping (NSImage?) -> Void) -> Process? {
         captureRegion(CGSpace.flip(screen.frame), completion: completion)
     }
 
@@ -89,7 +91,8 @@ enum ScreenshotManager {
         launch(CaptureMode.window.arguments, completion: completion)
     }
 
-    private static func run(_ arguments: [String], completion: @escaping (NSImage?) -> Void) {
+    @discardableResult
+    private static func run(_ arguments: [String], completion: @escaping (NSImage?) -> Void) -> Process? {
         launch(arguments) { completion($0.image) }
     }
 
