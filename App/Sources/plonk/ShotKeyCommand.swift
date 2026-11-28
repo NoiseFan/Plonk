@@ -8,6 +8,7 @@ enum ShotKeyCommand: Equatable {
     case undo
     case redo
     case selectDisplay
+    case restoreRegion
     case copyColor
     case zoomMagnifier(increasing: Bool)
 
@@ -19,7 +20,7 @@ enum ShotKeyCommand: Equatable {
         case .save: .output(.save)
         case .undo: .undo
         case .redo: .redo
-        case .selectDisplay, .copyColor, .zoomMagnifier: nil
+        case .selectDisplay, .restoreRegion, .copyColor, .zoomMagnifier: nil
         }
     }
 
@@ -53,6 +54,7 @@ enum ShotKeyCommand: Equatable {
             }
             switch (Self.letter(keyCode: keyCode, characters: characters), modifiers) {
             case ("f", []): self = .selectDisplay
+            case ("r", []): self = .restoreRegion
             case ("s", .command): self = .save
             case ("z", .command): self = .undo
             case ("z", [.command, .shift]): self = .redo
@@ -70,6 +72,7 @@ enum ShotKeyCommand: Equatable {
         switch keyCode {
         case kVK_ANSI_C: return "c"
         case kVK_ANSI_F: return "f"
+        case kVK_ANSI_R: return "r"
         case kVK_ANSI_S: return "s"
         case kVK_ANSI_Z: return "z"
         default: return nil

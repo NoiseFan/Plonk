@@ -98,8 +98,7 @@ final class QuickShotCanvas: NSView {
     var isTrackingPointer: Bool { gesture != nil }
     var isWaitingForSelection: Bool { !fixed && !hasSelection && drawingRegion == nil }
 
-    func showHint(_ visible: Bool) { controls.hint?.isHidden = !visible }
-    var hintFrame: CGRect? { controls.hint.flatMap { $0.isHidden ? nil : $0.frame } }
+    var hint: QuickShotTips? { controls.hint }
 
     /// The region on screen in view points: the one being drawn, else the selection.
     var regionFrame: CGRect? {
@@ -222,10 +221,11 @@ final class QuickShotCanvas: NSView {
         if let action = command.toolbarAction { perform(action) }
     }
 
-    /// Replaces the selection and its marks; the session checks for marks first.
-    func selectEntireDisplay() {
-        guard !fixed, selection != entireDisplay else { return }
-        confirmSelection(entireDisplay)
+    /// Replaces selection and marks with `rect` in pixels, or the whole display.
+    func select(_ rect: CGRect? = nil) {
+        let rect = rect ?? entireDisplay
+        guard !fixed, selection != rect else { return }
+        confirmSelection(rect)
         refresh()
     }
 

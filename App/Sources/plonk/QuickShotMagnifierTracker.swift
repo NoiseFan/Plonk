@@ -53,7 +53,7 @@ final class QuickShotMagnifierTracker {
         let canvas = target.canvas
         magnifier.showsHex = canvas.regionFrame == nil
         magnifier.update(at: target.canvasPoint(at: pointer), in: canvas.bounds,
-                         avoiding: waiting ? canvas.hintFrame : canvas.regionFrame, zoom: zoom)
+                         avoiding: waiting ? canvas.hint.flatMap { $0.isHidden ? nil : $0.frame } : canvas.regionFrame, zoom: zoom)
     }
 
     func zoom(increasing: Bool) {
