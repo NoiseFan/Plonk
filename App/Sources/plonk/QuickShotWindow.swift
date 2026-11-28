@@ -1,6 +1,6 @@
 import AppKit
 
-final class QuickShotWindow: NSWindow {
+final class QuickShotWindow: NSPanel {
     let canvas: QuickShotCanvas
     /// Region captures only: a window capture has no boundary to line up.
     let magnifier: QuickShotMagnifier?
@@ -11,25 +11,25 @@ final class QuickShotWindow: NSWindow {
     var onRegionPointerChange: ((CGPoint) -> Void)?
     private var interactingWithStyle = false
 
-    init(screen: NSScreen, bitmap: ShotBitmap, fixed: Bool, model: AppModel, annotation: ShotAnnotationState,
+    /// `regionDisplay` is nil for a window capture, which never offers or keeps a region.
+    init(frame: CGRect, visibleFrame visible: CGRect, bitmap: ShotBitmap, fixed: Bool, model: AppModel,
+         annotation: ShotAnnotationState, regionDisplay: ShotRegionRecord.Display? = nil,
          lastRegion: ShotRegionRecord? = nil) {
-        let frame = screen.frame
-        let visible = screen.visibleFrame
         let safeArea = CGRect(x: visible.minX - frame.minX, y: frame.maxY - visible.maxY,
                               width: visible.width, height: visible.height)
         canvas = QuickShotCanvas(bitmap: bitmap, size: frame.size, safeArea: safeArea, fixed: fixed,
                                  model: model, annotation: annotation)
         magnifier = fixed ? nil : QuickShotMagnifier(image: bitmap.image)
-        regionDisplay = fixed ? nil : ScreenIdentity.uuid(for: screen).map {
-            .init(uuid: $0, pixels: bitmap.size, points: bitmap.displaySize, scale: screen.backingScaleFactor)
-        }
-        restorableRegion = lastRegion?.rect(on: regionDisplay)
+        self.regionDisplay = fixed ? nil : regionDisplay
+        restorableRegion = lastRegion?.rect(on: self.regionDisplay)
         if restorableRegion != nil {
             canvas.hint?.setTips([.shotSelectDisplayHint, .shotRestoreRegionHint, .shotCopyColorHint])
         }
-        super.init(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        super.init(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         setFrame(frame, display: false)
         isReleasedWhenClosed = false
+        hidesOnDeactivate = false
+        animationBehavior = .none
         level = .screenSaver
         acceptsMouseMovedEvents = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
@@ -39,6 +39,12 @@ final class QuickShotWindow: NSWindow {
     }
 
     override var canBecomeKey: Bool { true }
+
+    func show() {
+        canvas.layoutSubtreeIfNeeded()
+        display()
+        orderFrontRegardless()
+    }
 
     func canvasPoint(at screenPoint: CGPoint) -> CGPoint {
         canvas.convert(convertPoint(fromScreen: screenPoint), from: nil)
@@ -67,5 +73,13 @@ final class QuickShotWindow: NSWindow {
               attachedSheet == nil, firstResponder === canvas else { return nil }
         return ShotKeyCommand(keyCode: Int(event.keyCode), characters: event.charactersIgnoringModifiers,
                               flags: event.modifierFlags, repeating: event.isARepeat)
+    }
+}
+
+extension ShotRegionRecord.Display {
+    /// The display a region is taken on, and the geometry it has now.
+    init?(screen: NSScreen, bitmap: ShotBitmap) {
+        guard let uuid = ScreenIdentity.uuid(for: screen) else { return nil }
+        self.init(uuid: uuid, pixels: bitmap.size, points: bitmap.displaySize, scale: screen.backingScaleFactor)
     }
 }
