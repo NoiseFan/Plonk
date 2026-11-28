@@ -20,7 +20,7 @@ enum ShotDisplayCapture {
                 guard let display = content.displays.first(where: { $0.displayID == request.id }) else {
                     throw Failure.displayUnavailable
                 }
-                let filter = content.filterExcludingPlonk(on: display)
+                let filter = content.screenshotFilter(on: display)
                 let configuration = configuration(displaySize: request.size, scale: request.scale)
                 group.addTask {
                     try Task.checkCancellation()
