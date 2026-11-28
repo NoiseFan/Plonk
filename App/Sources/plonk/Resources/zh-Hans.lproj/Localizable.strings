@@ -602,6 +602,7 @@
 "shotEditor.renderFailed" = "无法渲染标注";
 "shotEditor.writeFailed" = "无法写入文件";
 "tool.pen" = "画笔";
+"tool.line" = "直线";
 "tool.arrow" = "箭头";
 "tool.rectangle" = "矩形";
 "tool.ellipse" = "椭圆";

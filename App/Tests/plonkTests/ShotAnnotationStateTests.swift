@@ -31,15 +31,32 @@ struct ShotAnnotationStateTests {
         #expect(mark.width == 0.005)
     }
 
-    @Test func nextCaptureReadsDefaultsAfterTemporaryEdits() {
-        var config = Config()
-        config.shotAnnotationStyles.rectangle = .init(width: 7, color: .purple)
-        let capture = ShotAnnotationState(defaults: config.shotAnnotationStyles)
-        capture.styles.rectangle = .init(width: 5, color: .green)
+    @Test func lineStylesStayIndependentAcrossToolsAndCaptures() throws {
+        let defaults = AnnotationStyles(line: .init(width: 8, color: .blue),
+                                        arrow: .init(width: 12, color: .purple))
+        let capture = ShotAnnotationState(defaults: defaults)
+        capture.tool = .line
+        capture.styles.line = .init(width: 5, color: .green)
+        capture.enterEditor()
+        #expect(capture.tool == .line)
 
-        let next = ShotAnnotationState(defaults: config.shotAnnotationStyles)
+        var history = AnnotationHistory()
+        for kind in [Annotation.Kind.line, .arrow, .line] {
+            capture.tool = kind
+            capture.beginMark(in: &history, at: .zero, viewWidth: 500)
+            history.end(at: CGPoint(x: 0.5, y: 0.5))
+        }
+        #expect(history.annotations.map(\.colorIndex) == [AnnotationColor.green.index, AnnotationColor.purple.index,
+                                                        AnnotationColor.green.index])
+        #expect(history.annotations.map { $0.width * 500 } == [5, 12, 5])
 
-        #expect(next.styles.rectangle == .init(width: 7, color: .purple))
+        let next = ShotAnnotationState(defaults: defaults)
+        next.enterEditor()
+        next.tool = .line
+        next.beginMark(in: &history, at: .zero, viewWidth: 500)
+        let mark = try #require(history.live)
+        #expect(mark.colorIndex == AnnotationColor.blue.index)
+        #expect(mark.width * 500 == 8)
     }
 
     @Test func openingEditorKeepsSelectedToolBeforeAnyMarksExist() {

@@ -6,6 +6,8 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Added
 
+- **Draw straight lines on screenshots.** The line tool sits beside the arrow
+  in Quick Actions and the editor, with its own default color and width.
 - **Set a default width and color for each screenshot annotation tool.** Use
   the Quick Actions dial or the editor slider to adjust width for the current
   screenshot. Opening the editor from Quick Actions keeps the selected tool

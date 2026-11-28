@@ -28,6 +28,49 @@ struct AnnotationHistoryTests {
         #expect(history.annotations.first?.points == [start, end])
     }
 
+    @Test(arguments: [Annotation.Kind.line, .arrow],
+          [CGPoint(x: 0.75, y: 0.5), CGPoint(x: 0.5, y: 0.75),
+           CGPoint(x: 0.75, y: 0.75), CGPoint(x: -0.25, y: 0.25)])
+    func lineBasedMarksReplaceThePreviewEndpointAndUseTheReleasePoint(_ kind: Annotation.Kind, end: CGPoint) {
+        let start = CGPoint(x: 0.5, y: 0.5)
+        let bend = CGPoint(x: 0.625, y: 0.25)
+        var history = AnnotationHistory()
+        history.begin(kind, at: start, color: 0, width: 0.01)
+        history.drag(to: bend)
+        #expect(history.live?.points == [start, bend])
+        history.drag(to: start)
+        #expect(history.live?.points == [start])
+        history.end(at: end)
+        #expect(history.live == nil)
+        #expect(history.annotations.map(\.points) == [[start, end]])
+    }
+
+    @Test func emptyLinesPreserveRedoAndAValidLineReplacesIt() {
+        var history = AnnotationHistory()
+        history.begin(.line, at: start, color: 0, width: 0.01)
+        history.end(at: end)
+        history.begin(.arrow, at: start, color: 1, width: 0.02)
+        history.end(at: end)
+        history.undo()
+
+        for returnsAfterDrag in [false, true] {
+            history.begin(.line, at: start, color: 2, width: 0.03)
+            if returnsAfterDrag { history.drag(to: end) }
+            history.end(at: start)
+            #expect(history.live == nil)
+            #expect(history.canRedo)
+            #expect(history.annotations.map(\.kind) == [.line])
+        }
+
+        history.redo()
+        #expect(history.annotations.map(\.kind) == [.line, .arrow])
+        history.undo()
+        history.begin(.line, at: end, color: 2, width: 0.03)
+        history.end(at: start)
+        #expect(!history.canRedo)
+        #expect(history.annotations.map(\.kind) == [.line, .line])
+    }
+
     @Test func aNewMarkAfterUndoClearsRedo() {
         var history = AnnotationHistory()
         history.begin(.rectangle, at: start, color: 0, width: 0.01)

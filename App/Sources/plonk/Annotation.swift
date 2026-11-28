@@ -8,6 +8,7 @@ import SwiftUI
 struct Annotation: Identifiable, Equatable {
     enum Kind: String, CaseIterable, Identifiable {
         case pen
+        case line
         case arrow
         case rectangle
         case ellipse
@@ -18,6 +19,7 @@ struct Annotation: Identifiable, Equatable {
         var symbol: String {
             switch self {
             case .pen: return "pencil.tip"
+            case .line: return "line.diagonal"
             case .arrow: return "arrow.up.right"
             case .rectangle: return "rectangle"
             case .ellipse: return "circle"
@@ -30,6 +32,7 @@ struct Annotation: Identifiable, Equatable {
         var title: LocalizedStringResource {
             switch self {
             case .pen: return .toolPen
+            case .line: return .toolLine
             case .arrow: return .toolArrow
             case .rectangle: return .toolRectangle
             case .ellipse: return .toolEllipse
@@ -38,6 +41,7 @@ struct Annotation: Identifiable, Equatable {
         }
 
         var tracksEveryPoint: Bool { self == .pen || self == .highlight }
+        var drawsLineSegment: Bool { self == .line || self == .arrow }
     }
 
     let id = UUID()
@@ -140,20 +144,23 @@ enum AnnotationRenderer {
             case .ellipse:
                 context.stroke(Path(ellipseIn: annotation.boundingRect(in: size)), with: .color(color),
                                style: StrokeStyle(lineWidth: width))
-            case .arrow:
-                guard let start = annotation.points.first, let end = annotation.points.last else { continue }
-                let path = arrowPath(from: denormalize(start, size), to: denormalize(end, size),
-                                     head: max(width * 4, size.width * annotation.arrowHeadWidth))
-                context.stroke(path, with: .color(color),
+            case .line, .arrow:
+                context.stroke(linePath(for: annotation, in: size), with: .color(color),
                                style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             }
         }
     }
 
-    static func arrowPath(from start: CGPoint, to end: CGPoint, head: Double) -> Path {
+    static func linePath(for annotation: Annotation, in size: CGSize) -> Path {
         var path = Path()
+        guard let first = annotation.points.first, let last = annotation.points.last, first != last else { return path }
+        let start = denormalize(first, size)
+        let end = denormalize(last, size)
         path.move(to: start)
         path.addLine(to: end)
+        guard annotation.kind == .arrow else { return path }
+
+        let head = size.width * max(annotation.width * 4, annotation.arrowHeadWidth)
         let angle = atan2(end.y - start.y, end.x - start.x)
         for offset in [Double.pi * 0.82, -Double.pi * 0.82] {
             path.move(to: end)

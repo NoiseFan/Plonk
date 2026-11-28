@@ -230,7 +230,7 @@ struct AnnotationStyleTests {
 
     private var defaults: AnnotationStyles {
         let red = AnnotationStyle(width: 4, color: .red)
-        return AnnotationStyles(rectangle: red, ellipse: red, arrow: red,
+        return AnnotationStyles(rectangle: red, ellipse: red, line: red, arrow: red,
                                 highlight: AnnotationStyle(width: 20, color: .yellow), pen: red)
     }
 
@@ -238,6 +238,7 @@ struct AnnotationStyleTests {
         switch kind {
         case .rectangle: \.rectangle
         case .ellipse: \.ellipse
+        case .line: \.line
         case .arrow: \.arrow
         case .highlight: \.highlight
         case .pen: \.pen

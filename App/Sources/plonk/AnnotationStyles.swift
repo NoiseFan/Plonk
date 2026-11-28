@@ -1,6 +1,7 @@
 struct AnnotationStyles: Codable, Equatable {
     var rectangle = AnnotationStyle()
     var ellipse = AnnotationStyle()
+    var line = AnnotationStyle()
     var arrow = AnnotationStyle()
     var highlight = AnnotationStyle(width: 20, color: .yellow)
     var pen = AnnotationStyle()
@@ -9,6 +10,7 @@ struct AnnotationStyles: Codable, Equatable {
         switch kind {
         case .rectangle: return \.rectangle
         case .ellipse: return \.ellipse
+        case .line: return \.line
         case .arrow: return \.arrow
         case .highlight: return \.highlight
         case .pen: return \.pen
@@ -17,7 +19,7 @@ struct AnnotationStyles: Codable, Equatable {
 }
 
 extension AnnotationStyles {
-    private enum CodingKeys: String, CodingKey { case rectangle, ellipse, arrow, highlight, pen }
+    private enum CodingKeys: String, CodingKey { case rectangle, ellipse, line, arrow, highlight, pen }
 
     /// A value that does not read falls back to that tool's own default, so a bad highlight
     /// colour leaves it yellow; an entry that is not a style at all keeps the default whole.
@@ -31,6 +33,7 @@ extension AnnotationStyles {
         }
         rectangle = style(.rectangle, rectangle)
         ellipse = style(.ellipse, ellipse)
+        line = style(.line, line)
         arrow = style(.arrow, arrow)
         highlight = style(.highlight, highlight)
         pen = style(.pen, pen)

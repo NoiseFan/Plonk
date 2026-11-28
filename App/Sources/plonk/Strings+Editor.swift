@@ -15,6 +15,7 @@ extension LocalizedStringResource {
     static let shotEditorWriteFailed = Self.key("shotEditor.writeFailed")
 
     static let toolPen = Self.key("tool.pen")
+    static let toolLine = Self.key("tool.line")
     static let toolArrow = Self.key("tool.arrow")
     static let toolRectangle = Self.key("tool.rectangle")
     static let toolEllipse = Self.key("tool.ellipse")

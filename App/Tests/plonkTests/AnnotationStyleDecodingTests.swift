@@ -4,6 +4,20 @@ import Testing
 
 /// A bad annotation style must cost that one value, never the rest of config.json.
 struct AnnotationStyleDecodingTests {
+    @Test func oldStylesGainALineDefaultAndKeepTheSavedArrow() throws {
+        let config = try Config.decode(Data("""
+        {"shotAnnotationStyles":{"arrow":{"width":8,"color":"blue"}}}
+        """.utf8))
+        let encoded = try JSONEncoder().encode(config)
+        let object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        let styles = try #require(object["shotAnnotationStyles"] as? [String: [String: Any]])
+
+        #expect(styles["line"]?["width"] as? Int == 4)
+        #expect(styles["line"]?["color"] as? String == "red")
+        #expect(styles["arrow"]?["width"] as? Int == 8)
+        #expect(styles["arrow"]?["color"] as? String == "blue")
+    }
+
     @Test func unknownColorFallsBackWithoutLosingTheConfig() throws {
         let config = try Config.decode(Data("""
         {"appearance":{"accentHex":"#8C31A6"},

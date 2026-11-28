@@ -1,5 +1,6 @@
 import Testing
 import AppKit
+import SwiftUI
 @testable import plonk
 
 struct ImageFitTests {
@@ -66,15 +67,50 @@ struct AnnotationTests {
     @Test func onlyFreehandKindsKeepEveryPoint() {
         #expect(Annotation.Kind.pen.tracksEveryPoint)
         #expect(Annotation.Kind.highlight.tracksEveryPoint)
+        #expect(!Annotation.Kind.line.tracksEveryPoint)
         #expect(!Annotation.Kind.arrow.tracksEveryPoint)
         #expect(!Annotation.Kind.rectangle.tracksEveryPoint)
     }
 
-    @Test func arrowHeadSitsBehindTheTip() {
-        let path = AnnotationRenderer.arrowPath(from: .zero, to: CGPoint(x: 100, y: 0), head: 10)
-        let bounds = path.boundingRect
-        #expect(bounds.maxX <= 100.001)
-        #expect(bounds.minX >= -0.001)
+    @Test(arguments: [Annotation.Kind.styleOrder, Annotation.Kind.allCases])
+    func linePrecedesArrowInSettingsAndTheEditor(_ order: [Annotation.Kind]) throws {
+        let line = try #require(order.firstIndex(of: .line))
+        let arrow = try #require(order.firstIndex(of: .arrow))
+        #expect(line + 1 == arrow)
+    }
+
+    @Test(arguments: [false, true])
+    func arrowAddsAHeadAtTheEndOfTheSameLine(_ reversed: Bool) {
+        let size = CGSize(width: 400, height: 200)
+        let points = [CGPoint(x: 0.25, y: 0.25), CGPoint(x: 0.75, y: 0.25)]
+        let ordered = reversed ? Array(points.reversed()) : points
+        let line = Annotation(kind: .line, points: ordered, colorIndex: 0, width: 0.01)
+        let arrow = Annotation(kind: .arrow, points: ordered, colorIndex: 0, width: 0.01)
+        let start = CGPoint(x: reversed ? 300 : 100, y: 50)
+        let end = CGPoint(x: reversed ? 100 : 300, y: 50)
+        let linePath = AnnotationRenderer.linePath(for: line, in: size)
+        let arrowPath = AnnotationRenderer.linePath(for: arrow, in: size)
+        var shaft = Path()
+        shaft.move(to: start)
+        shaft.addLine(to: end)
+
+        #expect(linePath == shaft)
+        var moves: [CGPoint] = []
+        var ends: [CGPoint] = []
+        arrowPath.forEach { element in
+            switch element {
+            case .move(to: let point): moves.append(point)
+            case .line(to: let point): ends.append(point)
+            default: Issue.record("Expected only straight path elements")
+            }
+        }
+        #expect(moves == [start, end, end])
+        #expect(ends.count == 3)
+        #expect(ends.first == end)
+        for point in ends.dropFirst() {
+            #expect(reversed ? point.x > end.x : point.x < end.x)
+            #expect(abs(hypot(point.x - end.x, point.y - end.y) - 16) < 0.0001)
+        }
     }
 }
 

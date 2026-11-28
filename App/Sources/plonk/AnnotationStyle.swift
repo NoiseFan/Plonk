@@ -65,8 +65,8 @@ extension AnnotationStyle {
 }
 
 extension Annotation.Kind {
-    static let styleOrder: [Self] = [.rectangle, .ellipse, .arrow, .highlight, .pen]
-    static let quickShotOrder: [Self] = [.rectangle, .ellipse, .arrow, .pen, .highlight]
+    static let styleOrder: [Self] = [.rectangle, .ellipse, .line, .arrow, .highlight, .pen]
+    static let quickShotOrder: [Self] = [.rectangle, .ellipse, .line, .arrow, .pen, .highlight]
 
     var widthRange: ClosedRange<Int> { (self == .highlight ? 5 : 1)...9999 }
     var widthPath: WritableKeyPath<Config, Int> { stylePath.appending(path: \.width) }
