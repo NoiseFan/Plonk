@@ -196,9 +196,9 @@ final class QuickShotSession: NSObject {
             if let hex = magnifier.hex, !windows.contains(where: \.canvas.hasMarks) {
                 NSPasteboard.general.replaceContents(with: hex)
                 close(restoreFocus: true)
+                HUD.shared.show(.hudCopied(hex))
             }
-        case .zoomMagnifier(let increasing):
-            magnifier.zoom(increasing: increasing)
+        case .zoomMagnifier(let increasing): magnifier.zoom(increasing: increasing)
         case .cancel:
             window.canvas.handle(command)
         default:

@@ -12,7 +12,7 @@ What changed in each release, from a user's side. The commit log has the rest.
   near screen edges and avoids the selection when space allows.
 - **Pick a color from the screen.** While the magnifier is visible, press
   `C` to copy the sampled sRGB color as plain text, such as `#212830`, and
-  end the capture. You can do this while dragging a selection, but not once
+  end the capture. A notice shows the copied value. You can do this while dragging a selection, but not once
   something is marked, so a color copy never discards annotations.
 - **Set a default width and color for each screenshot annotation tool.** Use
   the Quick Actions dial or the editor slider to adjust width for the current
