@@ -51,6 +51,28 @@ struct ShotKeyCommandTests {
         #expect(command(kVK_ANSI_Y, "f", .shift) == nil)
     }
 
+    @Test func copyColorFollowsTheLetterC() {
+        #expect(command(kVK_ANSI_C, "c", []) == .copyColor)
+        #expect(command(kVK_ANSI_C, "с", []) == .copyColor)
+        #expect(command(kVK_ANSI_C, "c", .command) == nil)
+    }
+
+    @Test func plusAndMinusZoomTheMagnifier() {
+        #expect(command(kVK_ANSI_Equal, "=", []) == .zoomMagnifier(increasing: true))
+        #expect(command(kVK_ANSI_Equal, "+", .shift) == .zoomMagnifier(increasing: true))
+        #expect(command(kVK_ANSI_Minus, "-", []) == .zoomMagnifier(increasing: false))
+        #expect(command(kVK_ANSI_Minus, "-", .command) == nil)
+    }
+
+    @Test func onlyToolbarKeysMapToAToolbarAction() {
+        #expect(ShotKeyCommand.copy.toolbarAction == .output(.copy))
+        #expect(ShotKeyCommand.save.toolbarAction == .output(.save))
+        #expect(ShotKeyCommand.cancel.toolbarAction == .cancel)
+        #expect(ShotKeyCommand.selectDisplay.toolbarAction == nil)
+        #expect(ShotKeyCommand.copyColor.toolbarAction == nil)
+        #expect(ShotKeyCommand.zoomMagnifier(increasing: true).toolbarAction == nil)
+    }
+
     @Test func nonLatinLayoutFallsBackToTheKeyPosition() {
         #expect(command(kVK_ANSI_Z, "я", .command) == .undo)
         #expect(command(kVK_ANSI_Z, "Я", [.command, .shift]) == .redo)

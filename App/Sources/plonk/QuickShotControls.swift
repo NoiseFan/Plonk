@@ -3,6 +3,7 @@ import AppKit
 struct QuickShotControls {
     let dimensions = QuickShotDimensions()
     let toolbar: QuickShotToolbar
+    let hint: QuickShotTips?
     private let stylePanel = QuickShotStylePanel()
     private let safeArea: CGRect
 
@@ -10,9 +11,15 @@ struct QuickShotControls {
         toolbar = QuickShotToolbar(fixed: fixed, perform: perform)
         self.safeArea = safeArea
         dimensions.isHidden = fixed
+        hint = fixed ? nil : QuickShotTips([.shotSelectDisplayHint, .shotCopyColorHint])
+        if let hint {
+            let margin = QuickShotLayout.controlInset
+            // The flipped canvas puts its bottom edge at maxY.
+            hint.setFrameOrigin(CGPoint(x: safeArea.minX + margin, y: safeArea.maxY - margin - hint.frame.height))
+        }
     }
 
-    var views: [NSView] { [dimensions, toolbar, stylePanel] }
+    var views: [NSView] { [hint].compactMap { $0 } + [dimensions, toolbar, stylePanel] }
 
     func contains(_ point: CGPoint) -> Bool {
         (!toolbar.isHidden && toolbar.frame.contains(point)) ||

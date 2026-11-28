@@ -6,6 +6,14 @@ What changed in each release, from a user's side. The commit log has the rest.
 
 ### Added
 
+- **Find the exact pixels to capture in a region screenshot.** In Quick Actions,
+  the magnifier follows the pointer before and during a selection. Press
+  `+` or `=` to zoom in and `-` to zoom out. The magnifier changes sides
+  near screen edges and avoids the selection when space allows.
+- **Pick a color from the screen.** While the magnifier is visible, press
+  `C` to copy the sampled sRGB color as plain text, such as `#212830`, and
+  end the capture. A notice shows the copied value. You can do this while dragging a selection, but not once
+  something is marked, so a color copy never discards annotations.
 - **Set a default width and color for each screenshot annotation tool.** Use
   the Quick Actions dial or the editor slider to adjust width for the current
   screenshot. Opening the editor from Quick Actions keeps the selected tool
@@ -25,8 +33,8 @@ What changed in each release, from a user's side. The commit log has the rest.
   side. For a full display, it appears at the bottom center.
 - **Select a full display from the region picker.** Click the exposed desktop
   or press F to select the whole display under the pointer, replacing any
-  selection, as long as nothing is marked yet. A shortcut hint appears at the
-  lower left while you choose. Drag to draw a region and keep the other
+  selection, as long as nothing is marked yet. A hint at the lower left lists
+  the `F` and `C` shortcuts while you choose. Drag to draw a region and keep the other
   displays available for a replacement selection. Dragging inside a
   full-display selection draws a new region.
 - **Adjust the region before opening the editor.** Drag inside the blue

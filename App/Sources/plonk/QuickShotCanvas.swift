@@ -13,7 +13,6 @@ final class QuickShotCanvas: NSView {
     private let safeArea: CGRect
     private let fixed: Bool
     private let backdrop: QuickShotBackdrop
-    private let hint: QuickShotHint
     private let markup: QuickShotMarkupView
     private var history = AnnotationHistory()
     private var selection: CGRect?
@@ -38,7 +37,6 @@ final class QuickShotCanvas: NSView {
         self.fixed = fixed
         let frame = CGRect(origin: .zero, size: size)
         backdrop = QuickShotBackdrop(image: bitmap.image, frame: frame, fixed: fixed)
-        hint = QuickShotHint(in: safeArea)
         markup = QuickShotMarkupView(frame: frame)
         super.init(frame: frame)
         if fixed {
@@ -48,7 +46,6 @@ final class QuickShotCanvas: NSView {
         }
         addSubview(backdrop)
         addSubview(markup)
-        if !fixed { addSubview(hint) }
         controls.views.forEach { addSubview($0) }
         accentObservation = model.$config.map(\.appearance).removeDuplicates().sink { [weak self] appearance in
             self?.controls.toolbar.accent = appearance.accent
@@ -83,6 +80,11 @@ final class QuickShotCanvas: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     var hasMarks: Bool { history.canUndo || history.canRedo }
+    /// A region being drawn or resized, which only the canvas it started on samples.
+    var isDraggingRegionBoundary: Bool {
+        if case .adjust(_, _, let handle) = gesture { return handle != .zero }
+        if case .create = gesture { return true } else { return false }
+    }
 
     private var geometry: ShotSelection { ShotSelection(pixels: bitmap.size, view: bounds.size) }
     private var entireDisplay: CGRect { CGRect(origin: .zero, size: bitmap.size) }
@@ -96,7 +98,14 @@ final class QuickShotCanvas: NSView {
     var isTrackingPointer: Bool { gesture != nil }
     var isWaitingForSelection: Bool { !fixed && !hasSelection && drawingRegion == nil }
 
-    func showHint(_ visible: Bool) { hint.isHidden = !visible }
+    func showHint(_ visible: Bool) { controls.hint?.isHidden = !visible }
+    var hintFrame: CGRect? { controls.hint.flatMap { $0.isHidden ? nil : $0.frame } }
+
+    /// The region on screen in view points: the one being drawn, else the selection.
+    var regionFrame: CGRect? {
+        let region = if let draft = drawingRegion { geometry.selection(from: draft.start, to: draft.end) } else { selection }
+        return region.map(geometry.viewRect)
+    }
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
@@ -209,14 +218,8 @@ final class QuickShotCanvas: NSView {
     }
 
     func handle(_ command: ShotKeyCommand) {
-        switch command {
-        case .cancel: perform(.cancel)
-        case .copy: perform(.output(.copy))
-        case .save: perform(.output(.save))
-        case .undo: perform(.undo)
-        case .redo: perform(.redo)
-        case .selectDisplay: onSelectDisplay?()
-        }
+        if command == .selectDisplay { onSelectDisplay?(); return }
+        if let action = command.toolbarAction { perform(action) }
     }
 
     /// Replaces the selection and its marks; the session checks for marks first.
@@ -265,8 +268,7 @@ final class QuickShotCanvas: NSView {
         }
 
         let draft = drawingRegion
-        let region = if let draft { geometry.selection(from: draft.start, to: draft.end) } else { selection }
-        let frame = region.map(geometry.viewRect)
+        let frame = regionFrame
         backdrop.selection = frame
         markup.show(history, clippedTo: draft == nil ? frame : nil)
         controls.showRegion(selection != nil && draft == nil)

@@ -12,6 +12,8 @@ final class QuickShotSession: NSObject {
     private var windows: [QuickShotWindow] = []
     private var displayCaptures: [Process] = []
     private var keyMonitor: Any?
+    private lazy var magnifier = QuickShotMagnifierTracker(windows: { [weak self] in self?.windows ?? [] },
+                                                           isWaiting: { [weak self] in self?.isWaitingForSelection ?? false })
     private var pickerMonitor: Any?
     private var picker: Process?
     private var pickLocation: CGPoint?
@@ -116,6 +118,7 @@ final class QuickShotSession: NSObject {
         let window = QuickShotWindow(screen: screen, bitmap: bitmap, fixed: fixed, model: model,
                                      annotation: annotation)
         window.canvas.onCancel = { [weak self] in self?.cancel() }
+        if !fixed { magnifier.track(window) }
         window.canvas.onSelect = { [weak self, weak window] in
             guard let self else { return }
             windows.filter { $0 !== window }.forEach { $0.canvas.clearSelection() }
@@ -165,6 +168,7 @@ final class QuickShotSession: NSObject {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             self?.handleShortcut(event) == true ? nil : event
         }
+        magnifier.start()
     }
 
     private var windowUnderPointer: QuickShotWindow? {
@@ -181,13 +185,24 @@ final class QuickShotSession: NSObject {
         guard let window = windows.first(where: \.isKeyWindow), let command = window.shortcut(for: event) else {
             return false
         }
-        if command == .selectDisplay {
+        switch command {
+        case .selectDisplay:
             if NSEvent.pressedMouseButtons & 1 == 0, let target = windowUnderPointer {
                 selectEntireDisplay(in: target)
+                magnifier.update(at: NSEvent.mouseLocation)
             }
-        } else if command == .cancel {
+        case .copyColor:
+            // Copying ends the capture, so it must not throw away marks drawn on a selection.
+            if let hex = magnifier.hex, !windows.contains(where: \.canvas.hasMarks) {
+                NSPasteboard.general.replaceContents(with: hex)
+                close(restoreFocus: true)
+                HUD.shared.show(.hudCopied(hex))
+            }
+        case .zoomMagnifier(let increasing): magnifier.zoom(increasing: increasing)
+        case .cancel:
             window.canvas.handle(command)
-        } else if !window.canvas.isTrackingPointer {
+        default:
+            guard !window.canvas.isTrackingPointer else { break }
             let target = windows.first { $0.canvas.hasSelection } ?? window
             target.canvas.handle(command)
         }
@@ -273,6 +288,7 @@ final class QuickShotSession: NSObject {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         keyMonitor = nil
+        magnifier.stop()
         windows.forEach(dismiss)
         windows.removeAll()
         onClose()

@@ -2,6 +2,9 @@ import AppKit
 
 final class QuickShotWindow: NSWindow {
     let canvas: QuickShotCanvas
+    /// Region captures only: a window capture has no boundary to line up.
+    let magnifier: QuickShotMagnifier?
+    var onRegionPointerChange: ((CGPoint) -> Void)?
     private var interactingWithStyle = false
 
     init(screen: NSScreen, bitmap: ShotBitmap, fixed: Bool, model: AppModel, annotation: ShotAnnotationState) {
@@ -11,6 +14,7 @@ final class QuickShotWindow: NSWindow {
                               width: visible.width, height: visible.height)
         canvas = QuickShotCanvas(bitmap: bitmap, size: frame.size, safeArea: safeArea, fixed: fixed,
                                  model: model, annotation: annotation)
+        magnifier = fixed ? nil : QuickShotMagnifier(image: bitmap.image)
         super.init(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         setFrame(frame, display: false)
         isReleasedWhenClosed = false
@@ -18,10 +22,15 @@ final class QuickShotWindow: NSWindow {
         acceptsMouseMovedEvents = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         contentView = canvas
+        if let magnifier { canvas.addSubview(magnifier) }
         initialFirstResponder = canvas
     }
 
     override var canBecomeKey: Bool { true }
+
+    func canvasPoint(at screenPoint: CGPoint) -> CGPoint {
+        canvas.convert(convertPoint(fromScreen: screenPoint), from: nil)
+    }
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .leftMouseDown, attachedSheet == nil {
@@ -32,6 +41,12 @@ final class QuickShotWindow: NSWindow {
         if event.type == .leftMouseUp, interactingWithStyle {
             interactingWithStyle = false
             makeFirstResponder(canvas)
+        }
+        switch event.type {
+        case .leftMouseDown, .leftMouseDragged, .leftMouseUp:
+            onRegionPointerChange?(convertPoint(toScreen: event.locationInWindow))
+        default:
+            break
         }
     }
 

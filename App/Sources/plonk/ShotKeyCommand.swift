@@ -8,6 +8,20 @@ enum ShotKeyCommand: Equatable {
     case undo
     case redo
     case selectDisplay
+    case copyColor
+    case zoomMagnifier(increasing: Bool)
+
+    /// What the toolbar would do for this key; the session handles the rest.
+    var toolbarAction: QuickShotToolbar.Action? {
+        switch self {
+        case .cancel: .cancel
+        case .copy: .output(.copy)
+        case .save: .output(.save)
+        case .undo: .undo
+        case .redo: .redo
+        case .selectDisplay, .copyColor, .zoomMagnifier: nil
+        }
+    }
 
     init?(hotkey: Hotkey) {
         var flags: NSEvent.ModifierFlags = []
@@ -19,8 +33,8 @@ enum ShotKeyCommand: Equatable {
     }
 
     /// `characters` is the event's `charactersIgnoringModifiers`. On a Latin layout the
-    /// typed letter decides, as macOS menus do; on any other layout ⌘ with that letter
-    /// names no shortcut, so the US key position decides instead.
+    /// typed letter decides, as macOS menus do. Other layouts use the US key position
+    /// for letter shortcuts.
     init?(keyCode: Int, characters: String?, flags: NSEvent.ModifierFlags, repeating: Bool) {
         guard !repeating else { return nil }
         let modifiers = flags.intersection([.command, .shift, .option, .control])
@@ -28,11 +42,21 @@ enum ShotKeyCommand: Equatable {
         case (kVK_Escape, []): self = .cancel
         case (kVK_Return, []), (kVK_ANSI_KeypadEnter, []): self = .copy
         default:
+            switch (characters, modifiers) {
+            case ("+", []), ("+", .shift), ("=", []), ("=", .shift):
+                self = .zoomMagnifier(increasing: true)
+                return
+            case ("-", []):
+                self = .zoomMagnifier(increasing: false)
+                return
+            default: break
+            }
             switch (Self.letter(keyCode: keyCode, characters: characters), modifiers) {
             case ("f", []): self = .selectDisplay
             case ("s", .command): self = .save
             case ("z", .command): self = .undo
             case ("z", [.command, .shift]): self = .redo
+            case ("c", []): self = .copyColor
             default: return nil
             }
         }
@@ -44,6 +68,7 @@ enum ShotKeyCommand: Equatable {
             return char
         }
         switch keyCode {
+        case kVK_ANSI_C: return "c"
         case kVK_ANSI_F: return "f"
         case kVK_ANSI_S: return "s"
         case kVK_ANSI_Z: return "z"
